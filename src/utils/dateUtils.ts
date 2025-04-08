@@ -1,15 +1,8 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.formatDate = formatDate;
-exports.safeParseDate = safeParseDate;
-exports.formatTimestamp = formatTimestamp;
-exports.getDateFromTimestamp = getDateFromTimestamp;
 /**
  * Format date to a readable string (YYYY-MM-DD HH:MM:SS)
  */
-function formatDate(date) {
-    if (!date)
-        return null;
+export function formatDate(date: Date | null): string | null {
+    if (!date) return null;
     try {
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -18,17 +11,16 @@ function formatDate(date) {
         const minutes = String(date.getMinutes()).padStart(2, "0");
         const seconds = String(date.getSeconds()).padStart(2, "0");
         return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-    }
-    catch (e) {
+    } catch (e) {
         return null;
     }
 }
+
 /**
  * Safely parse a date string, returning null if invalid
  */
-function safeParseDate(dateStr) {
-    if (!dateStr)
-        return null;
+export function safeParseDate(dateStr: string | undefined): Date | null {
+    if (!dateStr) return null;
     try {
         // The title attribute contains the full date in format: "Mar 2, 2025 · 6:47 PM UTC"
         // Parse the entire string including time
@@ -52,10 +44,8 @@ function safeParseDate(dateStr) {
                 const minutes = parseInt(timeMatch[2]);
                 const isPM = timeMatch[3].toUpperCase() === "PM";
                 // Convert to 24-hour format
-                if (isPM && hours < 12)
-                    hours += 12;
-                if (!isPM && hours === 12)
-                    hours = 0;
+                if (isPM && hours < 12) hours += 12;
+                if (!isPM && hours === 12) hours = 0;
                 // Parse the date part
                 const dateObj = new Date(datePart);
                 if (!isNaN(dateObj.getTime())) {
@@ -66,28 +56,29 @@ function safeParseDate(dateStr) {
             }
         }
         return null;
-    }
-    catch (e) {
+    } catch (e) {
         console.error(`Error parsing date: ${e}`);
         return null;
     }
 }
+
 /**
  * Format timestamp to remove duplicate month names
  */
-function formatTimestamp(timestamp) {
+export function formatTimestamp(timestamp: string): string {
     // Remove duplicate month names (e.g., "Mar 13Mar 13" -> "Mar 13")
     const regex = /([A-Z][a-z]{2} \d{1,2})\1/;
     return timestamp.replace(regex, "$1");
 }
+
 /**
  * Convert relative timestamp to a proper date
  */
-function getDateFromTimestamp(timestamp, dateStr) {
+export function getDateFromTimestamp(timestamp: string, dateStr: string | undefined): Date | null {
     // First try to parse the full date from the title attribute
     const parsedDate = safeParseDate(dateStr);
-    if (parsedDate)
-        return parsedDate;
+    if (parsedDate) return parsedDate;
+
     // If that fails, try to parse from the timestamp
     const formattedTimestamp = formatTimestamp(timestamp);
     try {
@@ -96,7 +87,7 @@ function getDateFromTimestamp(timestamp, dateStr) {
             const [month, day] = formattedTimestamp.split(" ");
             const currentYear = new Date().getFullYear();
             // Map month name to month number
-            const months = {
+            const months: { [key: string]: number } = {
                 Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
                 Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11,
             };
@@ -113,8 +104,7 @@ function getDateFromTimestamp(timestamp, dateStr) {
             const now = new Date();
             if (unit === 'h') {
                 now.setHours(now.getHours() - value);
-            }
-            else if (unit === 'd') {
+            } else if (unit === 'd') {
                 now.setDate(now.getDate() - value);
             }
             return now;
@@ -125,8 +115,7 @@ function getDateFromTimestamp(timestamp, dateStr) {
             return date;
         }
         return null;
-    }
-    catch (e) {
+    } catch (e) {
         console.error(`Error parsing timestamp ${formattedTimestamp}: ${e}`);
         return null;
     }

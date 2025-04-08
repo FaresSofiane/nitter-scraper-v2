@@ -35,34 +35,27 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.saveTweets = saveTweets;
 const fs = __importStar(require("fs"));
+const path = __importStar(require("path"));
+const dateUtils_1 = require("./dateUtils");
 /**
- * Save tweets to a JSON file, deduplicating based on complete tweet object
- * @param tweets Array of tweets to save
- * @param outputFile Path to the output file
+ * Save tweets to a JSON file
  */
-function saveTweets(tweets, outputFile = "tweets.json") {
-    // Load existing tweets if file exists
-    let existingTweets = [];
-    if (fs.existsSync(outputFile)) {
-        try {
-            const data = fs.readFileSync(outputFile, "utf-8");
-            existingTweets = JSON.parse(data);
-            console.log(`Loaded ${existingTweets.length} existing tweets from ${outputFile}`);
+function saveTweets(tweets) {
+    try {
+        // Create output directory if it doesn't exist
+        const outputDir = path.join(process.cwd(), 'output');
+        if (!fs.existsSync(outputDir)) {
+            fs.mkdirSync(outputDir, { recursive: true });
         }
-        catch (error) {
-            console.error(`Error loading existing tweets: ${error}`);
-        }
+        // Create filename with current date
+        const now = new Date();
+        const timestamp = (0, dateUtils_1.formatDate)(now)?.replace(/[: ]/g, '-') || 'unknown-date';
+        const filename = path.join(outputDir, `tweets-${timestamp}.json`);
+        // Write tweets to file
+        fs.writeFileSync(filename, JSON.stringify(tweets, null, 2));
+        console.log(`Successfully saved ${tweets.length} tweets to ${filename}`);
     }
-    // Combine tweets and deduplicate using Set
-    const uniqueTweets = Array.from(new Set([...existingTweets, ...tweets].map((tweet) => JSON.stringify(tweet)))).map((str) => JSON.parse(str));
-    // Sort by timestamp (newest first)
-    uniqueTweets.sort((a, b) => {
-        if (a.timestamp && b.timestamp) {
-            return b.timestamp - a.timestamp;
-        }
-        return b.id.localeCompare(a.id);
-    });
-    // Save to file
-    fs.writeFileSync(outputFile, JSON.stringify(uniqueTweets, null, 2));
-    console.log(`Saved ${uniqueTweets.length} tweets to ${outputFile} (${uniqueTweets.length - existingTweets.length} new)`);
+    catch (error) {
+        console.error(`Error saving tweets: ${error}`);
+    }
 }

@@ -1,6 +1,6 @@
 {
   "name": "nitter-scraper",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "A Twitter scraper that uses Nitter to fetch tweets without authentication",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -28,7 +28,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.8.3"
   },
   "files": [
     "dist",

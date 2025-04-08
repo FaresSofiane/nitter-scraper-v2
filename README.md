@@ -2,6 +2,8 @@
 
 A TypeScript package for scraping tweets from Nitter without authentication.
 
+# FORK OF : https://www.npmjs.com/package/nitter-scraper?activeTab=readme
+
 ## Installation
 
 ```bash
@@ -66,6 +68,9 @@ interface Tweet {
   username: string;
   created_at: string;
   timestamp: number | null;
+
+  imageTweet: string[]; // added by me Sofiane
+  avatarUrl: string | null; // added by me Sofiane
 }
 ```
 
