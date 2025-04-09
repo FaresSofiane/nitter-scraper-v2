@@ -6,4 +6,9 @@ export interface Tweet {
     timestamp: number | null;
     imageTweet: string[];
     avatarUrl: string | null;
+    videoTweet: string[]; // Nouveau champ pour stocker les URLs des vidéos
+    originalUrl: string;
+    cards: any[]; // Nouveau champ pour stocker les informations des cartes
+
+
 }

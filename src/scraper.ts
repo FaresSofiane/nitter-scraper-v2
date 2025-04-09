@@ -6,6 +6,94 @@ import { Tweet } from './types/Tweet';
 const USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.1 Safari/605.1.15";
 const BASE_URL = "https://nitter.net";
 const DELAY_BETWEEN_REQUESTS = 2000; // 2 seconds delay between requests
+const TWITTER_URL = "https://x.com/{username}/status/{id}";
+
+
+// Fonction pour extraire les informations d'une carte (card)
+// @ts-ignore
+function extractCardInfo(cardElement: cheerio.Element, $: cheerio.CheerioAPI): any | null {
+    const card = $(cardElement);
+
+    // Structure à retourner
+    const result: any = {
+        type: 'card',
+        url: null,
+        imageUrl: null,
+        title: '',
+        description: '',
+        destination: ''
+    };
+
+    // Vérifier les deux formats possibles
+    // Format 1: card-container est un lien <a>
+    const cardContainer = card.find('.card-container');
+    if (cardContainer.is('a')) {
+        result.url = cardContainer.attr('href') || null;
+    }
+    // Format 2: card-content-container est un lien <a> à l'intérieur de card-container
+    else {
+        const contentContainer = card.find('.card-content-container');
+        if (contentContainer.is('a')) {
+            result.url = contentContainer.attr('href') || null;
+        }
+    }
+
+    // Extraire l'URL de l'image (les deux formats peuvent avoir des images)
+    // Vérifier d'abord dans .card-image
+    let imgElement = card.find('.card-image img');
+    if (imgElement.length === 0) {
+        // Si pas trouvé, chercher dans d'autres structures comme .attachments
+        imgElement = card.find('.attachments img, .gallery-video img');
+    }
+
+    if (imgElement.length > 0) {
+        let imgSrc = imgElement.attr('src') || null;
+        if (imgSrc) {
+            // Remplacer /pic/ par https://nitter.net/pic/
+            if (imgSrc.startsWith('/pic/')) {
+                imgSrc = `https://nitter.net${imgSrc}`;
+            } else if (!imgSrc.startsWith('http')) {
+                imgSrc = `https://nitter.net${imgSrc.startsWith('/') ? imgSrc : `/${imgSrc}`}`;
+            }
+            result.imageUrl = imgSrc;
+        }
+    }
+
+    // Extraire le titre (fonctionne pour les deux formats)
+    const titleElement = card.find('.card-title');
+    if (titleElement.length > 0) {
+        result.title = titleElement.text().trim();
+    }
+
+    // Extraire la description (fonctionne pour les deux formats)
+    const descriptionElement = card.find('.card-description');
+    if (descriptionElement.length > 0) {
+        result.description = descriptionElement.text().trim();
+    }
+
+    // Extraire la destination (principalement dans le format 1)
+    const destinationElement = card.find('.card-destination');
+    if (destinationElement.length > 0) {
+        result.destination = destinationElement.text().trim();
+    }
+
+    // Compter les éléments non vides
+    let nonEmptyCount = 0;
+    if (result.url !== null) nonEmptyCount++;
+    if (result.imageUrl !== null) nonEmptyCount++;
+    if (result.title !== "") nonEmptyCount++;
+    if (result.description !== "") nonEmptyCount++;
+    if (result.destination !== "") nonEmptyCount++;
+
+    // Ne retourner la carte que si au moins deux éléments sont remplis
+    if (nonEmptyCount >= 2) {
+        return result;
+    }
+
+    return null;
+}
+
+
 
 /**
  * Extract tweets and next cursor from HTML content
@@ -68,13 +156,35 @@ function extractTweetsFromHtml(html: string, username: string, existingTweets: S
 
             // Collect image URLs from the tweet
             const imageTweet: string[] = [];
-            tweetElement.find(".attachment-image").each((_, imgElement) => {
+            tweetElement.find(".attachment.image a.still-image").each((_, imgElement) => {
                 const imgSrc = $(imgElement).attr("href");
                 if (imgSrc) {
                     // Add base URL if it's a relative path
                     const fullImgSrc = imgSrc.startsWith("http") ? imgSrc : `${BASE_URL}${imgSrc}`;
                     imageTweet.push(fullImgSrc);
                 }
+            });
+
+            // Collect video URLs from the tweet
+            const videoTweet: string[] = [];
+            tweetElement.find("video").each((_, videoElement) => {
+                console.log($(videoElement));
+                const dataUrl = $(videoElement).attr("data-url");
+                if (dataUrl) {
+                    // Add base URL if it's a relative path
+                    const fullVideoUrl = dataUrl.startsWith("http") ? dataUrl : `${BASE_URL}${dataUrl}`;
+                    videoTweet.push(fullVideoUrl);
+                }
+            });
+
+
+            const cardElements = tweetElement.find(".card");
+            const cards: any[] = [];
+            cardElements.each((_, cardElement) => {
+                const cardInfo = extractCardInfo(cardElement, $);
+                if (cardInfo) {
+                    cards.push(cardInfo);
+                };
             });
 
             // Create tweet object
@@ -85,7 +195,11 @@ function extractTweetsFromHtml(html: string, username: string, existingTweets: S
                 created_at: date ? date.toISOString() : "",
                 timestamp: date ? date.getTime() : null,
                 imageTweet,
-                avatarUrl
+                videoTweet, // Ajout des URLs de vidéos
+                avatarUrl,
+                cards, // Placeholder for cards
+                originalUrl: TWITTER_URL.replace('{username}', username).replace('{id}', cleanId)
+
             });
         } catch (error) {
             console.error(`Error extracting tweet: ${error}`);
@@ -94,7 +208,6 @@ function extractTweetsFromHtml(html: string, username: string, existingTweets: S
 
     return { tweets, nextCursor };
 }
-
 /**
  * Fetch tweets for a given username
  */
@@ -107,9 +220,7 @@ export async function fetchTweets(username: string, maxPages: number = 3): Promi
 
         do {
             // Construct URL with cursor if available
-            const url = nextCursor
-                ? `${BASE_URL}/${username}/search?cursor=${nextCursor}`
-                : `${BASE_URL}/${username}`;
+            const url = `${BASE_URL}/${username}`
 
             console.log(`Fetching tweets from: ${url}`);
 

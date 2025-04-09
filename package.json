@@ -1,6 +1,6 @@
 {
-  "name": "nitter-scraper",
-  "version": "1.0.4",
+  "name": "nitter-scraper-v2",
+  "version": "1.0.5",
   "description": "A Twitter scraper that uses Nitter to fetch tweets without authentication",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -20,7 +20,7 @@
     "nitter",
     "tweets"
   ],
-  "author": "wslyvh",
+  "author": "faressofiane",
   "license": "MIT",
   "dependencies": {
     "cheerio": "^1.0.0-rc.12",
