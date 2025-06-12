@@ -97,8 +97,18 @@ function getDateFromTimestamp(timestamp, dateStr) {
             const currentYear = new Date().getFullYear();
             // Map month name to month number
             const months = {
-                Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
-                Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11,
+                Jan: 0,
+                Feb: 1,
+                Mar: 2,
+                Apr: 3,
+                May: 4,
+                Jun: 5,
+                Jul: 6,
+                Aug: 7,
+                Sep: 8,
+                Oct: 9,
+                Nov: 10,
+                Dec: 11,
             };
             if (months[month] !== undefined) {
                 const date = new Date(currentYear, months[month], parseInt(day));
@@ -111,10 +121,10 @@ function getDateFromTimestamp(timestamp, dateStr) {
             const value = parseInt(match[1]);
             const unit = match[2];
             const now = new Date();
-            if (unit === 'h') {
+            if (unit === "h") {
                 now.setHours(now.getHours() - value);
             }
-            else if (unit === 'd') {
+            else if (unit === "d") {
                 now.setDate(now.getDate() - value);
             }
             return now;

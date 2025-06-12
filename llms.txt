@@ -1,0 +1,326 @@
+# 🐦 Nitter Scraper V2 - Documentation Complète
+
+## 📋 Vue d'ensemble
+
+Nitter Scraper V2 est un package TypeScript puissant permettant de récupérer des tweets depuis Nitter sans authentification. Cette version améliorée ajoute le support des proxies, l'extraction de médias (images/vidéos), les cartes de prévisualisation et bien plus encore !
+
+## ✨ Fonctionnalités principales
+
+- 🚀 **Scraping sans authentification** - Aucune clé API Twitter nécessaire
+- 🔄 **Gestion automatique de la pagination** - Récupère plusieurs pages automatiquement
+- 🛡️ **Protection contre la limitation de débit** - Délais intelligents entre les requêtes
+- 🌐 **Support proxy avancé** - Trois modes : sans proxy, liste personnalisée, ou URL de téléchargement
+- 📷 **Extraction de médias** - Images, vidéos et cartes de prévisualisation
+- 👤 **Informations utilisateur** - Avatar et métadonnées
+- 🔧 **TypeScript natif** - Typages complets et intellisense
+- ⚡ **Performance optimisée** - Gestion d'erreurs et retry automatique
+
+## 📦 Installation
+
+### Installation comme bibliothèque
+```bash
+npm install nitter-scraper-v2
+```
+
+### Installation globale pour utilisation CLI
+```bash
+npm install -g nitter-scraper-v2
+```
+
+### Avec Bun (recommandé pour le développement)
+```bash
+bun install nitter-scraper-v2
+```
+
+## 🚀 Démarrage rapide
+
+### Utilisation comme bibliothèque
+
+```typescript
+import { fetchTweets } from "nitter-scraper-v2";
+
+async function main() {
+  const tweets = await fetchTweets("elonmusk", 3);
+  console.log(`Trouvé ${tweets.length} tweets`);
+
+  tweets.forEach((tweet) => {
+    console.log(`${tweet.username}: ${tweet.text}`);
+    if (tweet.imageTweet.length > 0) {
+      console.log(`📷 Images: ${tweet.imageTweet.length}`);
+    }
+    if (tweet.videoTweet.length > 0) {
+      console.log(`🎥 Vidéos: ${tweet.videoTweet.length}`);
+    }
+  });
+}
+
+main().catch(console.error);
+```
+
+### Utilisation comme outil CLI
+
+```bash
+# Lancer le scraper avec Bun
+bun run cli
+
+# Ou si installé globalement
+nitter-scraper-v2
+```
+
+## 📚 API complète
+
+### Fonction fetchTweets
+
+```typescript
+function fetchTweets(
+  username: string,
+  maxPages?: number,
+  useProxies?: boolean,
+  proxyOptions?: ProxyOptions
+): Promise<Tweet[]>;
+```
+
+#### Paramètres
+
+| Paramètre      | Type           | Défaut       | Description                            |
+| -------------- | -------------- | ------------ | -------------------------------------- |
+| `username`     | `string`       | **requis**   | Nom d'utilisateur Twitter (sans @)    |
+| `maxPages`     | `number`       | `3`          | Nombre maximum de pages à récupérer    |
+| `useProxies`   | `boolean`      | `false`      | Activer l'utilisation de proxies      |
+| `proxyOptions` | `ProxyOptions` | `undefined`  | Options de configuration des proxies   |
+
+## 🌐 Gestion des proxies
+
+Cette version offre trois modes de gestion des proxies :
+
+### 1. Sans proxy (par défaut)
+
+```typescript
+const tweets = await fetchTweets("username", 3, false);
+```
+
+### 2. Liste de proxies personnalisée
+
+```typescript
+import { fetchTweets, ProxyOptions } from "nitter-scraper-v2";
+
+const proxyOptions: ProxyOptions = {
+  proxyList: [
+    "192.168.1.1:8080:user1:pass1",
+    "192.168.1.2:8080:user2:pass2",
+    "192.168.1.3:8080:user3:pass3",
+  ],
+};
+
+const tweets = await fetchTweets("username", 3, true, proxyOptions);
+```
+
+### 3. URL de téléchargement de proxies
+
+```typescript
+const proxyOptions: ProxyOptions = {
+  proxyUrl: "https://votre-serveur.com/proxies.txt",
+};
+
+const tweets = await fetchTweets("username", 3, true, proxyOptions);
+```
+
+### 4. URL Webshare.io par défaut
+
+```typescript
+// Utilise l'URL Webshare.io configurée par défaut
+const tweets = await fetchTweets("username", 3, true);
+```
+
+## 📝 Types TypeScript
+
+### Interface Tweet
+
+```typescript
+interface Tweet {
+  id: string;                 // ID unique du tweet
+  text: string;              // Contenu textuel du tweet
+  username: string;          // Nom d'utilisateur de l'auteur
+  created_at: string;        // Date de création (chaîne ISO)
+  timestamp: number | null;  // Timestamp Unix (millisecondes)
+  imageTweet: string[];      // URLs des images attachées
+  videoTweet: string[];      // URLs des vidéos attachées
+  avatarUrl: string | null;  // URL de l'avatar utilisateur
+  cards: Card[];             // Cartes de prévisualisation
+  originalUrl: string;       // URL originale du tweet sur Twitter/X
+}
+```
+
+### Interface ProxyOptions
+
+```typescript
+export type ProxyOptions = {
+  proxyList?: string[];  // Liste de proxies au format "host:port:username:password"
+  proxyUrl?: string;     // URL pour télécharger la liste de proxies
+};
+```
+
+### Interface Card
+
+```typescript
+interface Card {
+  type: "card";              // Type de carte
+  url: string | null;        // URL de destination
+  imageUrl: string | null;   // URL de l'image de prévisualisation
+  title: string;             // Titre de la carte
+  description: string;       // Description de la carte
+  destination: string;       // Domaine de destination
+}
+```
+
+## 🔧 Configuration avancée
+
+### Format des proxies
+
+Les proxies doivent être au format : `host:port:username:password`
+
+Exemple :
+```
+proxy1.example.com:8080:monuser:monpass
+192.168.1.100:3128:admin:secret123
+proxy-server.net:1080:client:password
+```
+
+## 📁 Structure du projet
+
+```
+nitter-scraper-v2/
+├── src/
+│   ├── index.ts          # Point d'entrée principal
+│   ├── scraper.ts        # Logique de scraping principale
+│   ├── utils/            # Utilitaires
+│   └── types/            # Définitions de types
+├── dist/                 # Code compilé
+├── examples/             # Exemples d'utilisation
+├── package.json          # Configuration du package
+└── README.md            # Documentation principale
+```
+
+## 💡 Exemples d'utilisation
+
+### Exemple basique
+
+```typescript
+import { fetchTweets } from "nitter-scraper-v2";
+
+// Récupérer les 5 derniers tweets d'un utilisateur
+const tweets = await fetchTweets("username", 5);
+console.log(tweets);
+```
+
+### Exemple avec proxies
+
+```typescript
+import { fetchTweets } from "nitter-scraper-v2";
+
+const proxyOptions = {
+  proxyList: [
+    "proxy1.com:8080:user:pass",
+    "proxy2.com:8080:user:pass"
+  ]
+};
+
+const tweets = await fetchTweets("username", 3, true, proxyOptions);
+```
+
+### Exemple d'extraction de médias
+
+```typescript
+import { fetchTweets } from "nitter-scraper-v2";
+
+const tweets = await fetchTweets("username", 2);
+
+tweets.forEach(tweet => {
+  console.log(`Tweet: ${tweet.text}`);
+  
+  // Afficher les images
+  if (tweet.imageTweet.length > 0) {
+    console.log('Images trouvées:');
+    tweet.imageTweet.forEach(img => console.log(`- ${img}`));
+  }
+  
+  // Afficher les vidéos
+  if (tweet.videoTweet.length > 0) {
+    console.log('Vidéos trouvées:');
+    tweet.videoTweet.forEach(video => console.log(`- ${video}`));
+  }
+  
+  // Afficher les cartes de prévisualisation
+  if (tweet.cards.length > 0) {
+    console.log('Cartes de prévisualisation:');
+    tweet.cards.forEach(card => {
+      console.log(`- ${card.title}: ${card.description}`);
+    });
+  }
+});
+```
+
+## 🛠️ Scripts disponibles
+
+Dans le fichier `package.json`, plusieurs scripts sont disponibles :
+
+- `npm run build` : Compile le TypeScript vers JavaScript
+- `npm run start` : Lance l'application avec Bun
+- `npm run cli` : Lance l'interface CLI avec Bun
+- `npm run prepare` : Prépare le package (compile automatiquement)
+
+## 📋 Dépendances
+
+### Dépendances principales
+- `axios` : Client HTTP pour les requêtes
+- `cheerio` : Parser HTML/DOM côté serveur
+- `http-proxy-agent` & `https-proxy-agent` : Support des proxies HTTP/HTTPS
+- `socks-proxy-agent` : Support des proxies SOCKS
+- `react-native-html-parser` : Parser HTML additionnel
+- `tsc-alias` : Résolution des alias TypeScript
+
+### Dépendances de développement
+- `@types/node` : Types Node.js pour TypeScript
+- `typescript` : Compilateur TypeScript
+
+## ⚡ Conseils de performance
+
+1. **Utilisez la pagination intelligemment** : Ne récupérez que le nombre de pages nécessaire
+2. **Gérez les proxies efficacement** : Utilisez une rotation de proxies pour éviter les blocages
+3. **Implémentez la gestion d'erreurs** : Toujours wrapper les appels dans try/catch
+4. **Respectez les limites** : Ajoutez des délais entre les requêtes pour éviter la détection
+
+## 🚨 Limitations et bonnes pratiques
+
+- **Respect des conditions d'utilisation** : Assurez-vous de respecter les ToS de Twitter/X
+- **Limitation de débit** : Le package inclut des protections, mais soyez raisonnable
+- **Proxies** : Utilisez des proxies de qualité pour éviter les blocages
+- **Gestion d'erreurs** : Implémentez toujours une logique de retry robuste
+
+## 🔍 Dépannage
+
+### Erreurs communes
+
+1. **Proxy non accessible** : Vérifiez la configuration et la validité des proxies
+2. **Rate limiting** : Augmentez les délais entre les requêtes
+3. **Nitter indisponible** : Le service peut être temporairement inaccessible
+4. **Utilisateur introuvable** : Vérifiez que le nom d'utilisateur existe
+
+### Solutions
+
+- Activez les logs pour déboguer
+- Testez avec différentes instances Nitter
+- Utilisez des proxies rotatifs
+- Implémentez une logique de retry avec backoff exponentiel
+
+## 📄 Licence
+
+Ce projet est sous licence MIT. Voir le fichier LICENSE pour plus de détails.
+
+## 🤝 Contribution
+
+Les contributions sont les bienvenues ! N'hésitez pas à ouvrir des issues ou soumettre des pull requests.
+
+---
+
+*Documentation générée pour nitter-scraper-v2 v1.1.1* 

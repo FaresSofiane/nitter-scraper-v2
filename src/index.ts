@@ -1,3 +1,3 @@
-import { fetchTweets } from './scraper';
+import { fetchTweets } from "./scraper";
 
 export { fetchTweets };
