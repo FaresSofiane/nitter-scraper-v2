@@ -1,7 +1,7 @@
 import * as cheerio from "cheerio";
 import axios from "axios";
 import { getDateFromTimestamp } from "./utils/dateUtils";
-import { Tweet } from "./types/Tweet";
+import { Tweet, TweetStats, VideoInfo } from "./types/Tweet";
 import * as fs from "fs";
 import { execSync } from "child_process";
 import { HttpsProxyAgent } from "https-proxy-agent";
@@ -349,9 +349,10 @@ function extractTweetsFromHtml(
           }
         });
 
-      // Collect video URLs from the tweet
+      // Collect video URLs from the tweet (legacy)
       const videoTweet: string[] = [];
-      tweetElement.find("video").each((_, videoElement) => {
+      // Chercher les vidéos dans différentes structures possibles
+      tweetElement.find("video, .gallery-video video, .attachment.video-container video").each((_, videoElement) => {
         const dataUrl = $(videoElement).attr("data-url");
         if (dataUrl) {
           // Add base URL if it's a relative path
@@ -359,6 +360,115 @@ function extractTweetsFromHtml(
             ? dataUrl
             : `${BASE_URL}${dataUrl}`;
           videoTweet.push(fullVideoUrl);
+        }
+      });
+
+      // Collect detailed video information
+      const videos: VideoInfo[] = [];
+      
+      // Méthode 1: Chercher les balises video directement
+      tweetElement.find("video").each((_, videoElement) => {
+        const $video = $(videoElement);
+        const posterUrl = $video.attr("poster");
+        const dataUrl = $video.attr("data-url");
+        
+        const videoInfo: VideoInfo = {
+          posterUrl: null,
+          videoUrl: null
+        };
+        
+        // Process poster URL
+        if (posterUrl) {
+          videoInfo.posterUrl = posterUrl.startsWith("http")
+            ? posterUrl
+            : `${BASE_URL}${posterUrl}`;
+        }
+        
+        // Process video URL
+        if (dataUrl) {
+          videoInfo.videoUrl = dataUrl.startsWith("http")
+            ? dataUrl
+            : `${BASE_URL}${dataUrl}`;
+        }
+        
+        if (videoInfo.posterUrl || videoInfo.videoUrl) {
+          videos.push(videoInfo);
+        }
+      });
+      
+      // Méthode 2: Chercher les conteneurs de vidéo avec des images de prévisualisation
+      tweetElement.find(".gallery-video, .video-container").each((_, containerElement) => {
+        const $container = $(containerElement);
+        
+        // Chercher l'image de prévisualisation dans le conteneur
+        const $img = $container.find("img");
+        const posterUrl = $img.attr("src");
+        
+        // Chercher l'URL de la vidéo dans les attributs data-url
+        const $videoElement = $container.find("[data-url]");
+        const dataUrl = $videoElement.attr("data-url");
+        
+        if (posterUrl || dataUrl) {
+          const videoInfo: VideoInfo = {
+            posterUrl: null,
+            videoUrl: null
+          };
+          
+          // Process poster URL
+          if (posterUrl) {
+            videoInfo.posterUrl = posterUrl.startsWith("http")
+              ? posterUrl
+              : `${BASE_URL}${posterUrl}`;
+          }
+          
+          // Process video URL
+          if (dataUrl) {
+            videoInfo.videoUrl = dataUrl.startsWith("http")
+              ? dataUrl
+              : `${BASE_URL}${dataUrl}`;
+          }
+          
+          // Vérifier qu'on n'a pas déjà cette vidéo
+          const isDuplicate = videos.some(v => 
+            v.videoUrl === videoInfo.videoUrl || v.posterUrl === videoInfo.posterUrl
+          );
+          
+          if (!isDuplicate && (videoInfo.posterUrl || videoInfo.videoUrl)) {
+            videos.push(videoInfo);
+          }
+        }
+      });
+
+      // Extract tweet statistics
+      const stats: TweetStats = {
+        comments: 0,
+        retweets: 0,
+        quotes: 0,
+        likes: 0,
+        views: 0
+      };
+
+      // Parse statistics from tweet-stats
+      tweetElement.find(".tweet-stats .tweet-stat").each((_, statElement) => {
+        const $stat = $(statElement);
+        const iconElement = $stat.find(".icon-container span");
+        const numberText = $stat.text().trim();
+        
+        // Extract number from text (remove non-numeric characters except commas)
+        const numberMatch = numberText.match(/[\d,]+/);
+        const number = numberMatch ? parseInt(numberMatch[0].replace(/,/g, ''), 10) : 0;
+        
+        // Determine stat type by icon class
+        if (iconElement.hasClass("icon-comment")) {
+          stats.comments = number;
+        } else if (iconElement.hasClass("icon-retweet")) {
+          stats.retweets = number;
+        } else if (iconElement.hasClass("icon-quote")) {
+          stats.quotes = number;
+        } else if (iconElement.hasClass("icon-heart")) {
+          stats.likes = number;
+        } else if (iconElement.hasClass("icon-play")) {
+          stats.views = number;
         }
       });
 
@@ -383,6 +493,8 @@ function extractTweetsFromHtml(
         timestamp: date ? date.getTime() : null,
         imageTweet,
         videoTweet,
+        videos,
+        stats,
         avatarUrl,
         cards,
         originalUrl: TWITTER_URL.replace("{username}", username).replace(
