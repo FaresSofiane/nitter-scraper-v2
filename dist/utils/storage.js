@@ -53,7 +53,6 @@ function saveTweets(tweets) {
         const filename = path.join(outputDir, `tweets-${timestamp}.json`);
         // Write tweets to file
         fs.writeFileSync(filename, JSON.stringify(tweets, null, 2));
-        console.log(`Successfully saved ${tweets.length} tweets to ${filename}`);
     }
     catch (error) {
         console.error(`Error saving tweets: ${error}`);
