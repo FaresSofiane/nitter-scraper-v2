@@ -1,6 +1,6 @@
 {
   "name": "nitter-scraper-v2",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "A Twitter scraper that uses Nitter to fetch tweets without authentication",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
