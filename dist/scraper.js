@@ -510,7 +510,6 @@ async function fetchTweets(username, maxPages = 3, useProxies = false, proxyOpti
         let userProfile = null;
         if (useConcurrency && maxPages > 1) {
             // Mode concurrent optimisé : récupération séquentielle rapide sans délais
-            console.log(`🚀 Mode concurrent activé - récupération rapide sans délais de ${maxPages} pages`);
             let nextCursor = null;
             let pagesProcessed = 0;
             // Récupérer les pages une par une mais sans délai entre les requêtes
@@ -530,10 +529,8 @@ async function fetchTweets(username, maxPages = 3, useProxies = false, proxyOpti
                     }
                     nextCursor = result.nextCursor;
                     pagesProcessed++;
-                    console.log(`📄 Page ${pagesProcessed}/${maxPages} récupérée (${result.tweets.length} tweets)`);
                     // Pas de délai en mode concurrent - on enchaîne directement
                     if (!nextCursor) {
-                        console.log(`⚠️  Plus de pages disponibles après ${pagesProcessed} pages`);
                         break;
                     }
                 }
@@ -545,7 +542,6 @@ async function fetchTweets(username, maxPages = 3, useProxies = false, proxyOpti
         }
         else {
             // Mode séquentiel : traitement page par page avec délais (comportement original)
-            console.log(`📄 Mode séquentiel - récupération de ${maxPages} pages avec délais de ${DELAY_BETWEEN_REQUESTS}ms`);
             let nextCursor = null;
             let pagesProcessed = 0;
             do {
@@ -561,10 +557,8 @@ async function fetchTweets(username, maxPages = 3, useProxies = false, proxyOpti
                 }
                 nextCursor = result.nextCursor;
                 pagesProcessed++;
-                console.log(`📄 Page ${pagesProcessed}/${maxPages} récupérée (${result.tweets.length} tweets)`);
                 // Add delay between requests to avoid rate limiting
                 if (nextCursor && pagesProcessed < maxPages) {
-                    console.log(`⏳ Attente de ${DELAY_BETWEEN_REQUESTS}ms avant la page suivante...`);
                     await new Promise((resolve) => setTimeout(resolve, DELAY_BETWEEN_REQUESTS));
                 }
             } while (nextCursor && pagesProcessed < maxPages);
