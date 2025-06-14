@@ -1,21 +1,22 @@
 # 🐦 Nitter Scraper V2 - Documentation Complète
 
+**Développé par [Fares Sofiane](https://github.com/FaresSofiane)** • **[Repository GitHub](https://github.com/FaresSofiane/nitter-scraper-v2)**
+
 ## 📋 Vue d'ensemble
 
-Nitter Scraper V2 est un package TypeScript puissant permettant de récupérer des tweets depuis Nitter sans authentification. Cette version améliorée ajoute le support des proxies, l'extraction de médias (images/vidéos), les cartes de prévisualisation, les informations de vérification des comptes, les statistiques des tweets, le mode concurrent et bien plus encore !
+Nitter Scraper V2 est un package TypeScript professionnel permettant de récupérer des tweets et profils utilisateur depuis Nitter sans authentification. Ce fork amélioré du package original [nitter-scraper](https://www.npmjs.com/package/nitter-scraper) offre une gestion sophistiquée des proxies, l'extraction complète des médias, les statistiques de profil utilisateur, et un traitement concurrent haute performance.
 
 ## ✨ Fonctionnalités principales
 
 - 🚀 **Scraping sans authentification** - Aucune clé API Twitter nécessaire
-- 🔄 **Gestion automatique de la pagination** - Récupère plusieurs pages automatiquement
-- 🛡️ **Protection contre la limitation de débit** - Délais intelligents entre les requêtes
-- 🌐 **Support proxy avancé** - Trois modes : sans proxy, liste personnalisée, ou URL de téléchargement
-- 📷 **Extraction de médias** - Images, vidéos avec informations détaillées et cartes de prévisualisation
-- 👤 **Informations utilisateur complètes** - Avatar, nom complet, statut et type de vérification
-- 📊 **Statistiques des tweets** - Commentaires, retweets, citations, likes, vues
-- ⚡ **Mode concurrent** - Récupération séquentielle rapide sans délais
-- 🔧 **TypeScript natif** - Typages complets et intellisense
-- ⚡ **Performance optimisée** - Gestion d'erreurs et retry automatique
+- 👤 **Profils utilisateur complets** - Extraction des informations, statistiques et bannières
+- 🔄 **Pagination intelligente** - Traitement automatique multi-pages avec gestion des curseurs
+- 🛡️ **Support proxy avancé** - Modes multiples avec basculement automatique
+- 📷 **Extraction média complète** - Images, vidéos et cartes de prévisualisation
+- 📊 **Statistiques détaillées** - Métriques d'engagement et statistiques de profil
+- ⚡ **Modes haute performance** - Traitement concurrent pour collecte rapide
+- 🔧 **Support TypeScript complet** - Définitions de types et IntelliSense
+- 🛠️ **Prêt pour l'entreprise** - Gestion d'erreurs, logique de retry et stabilité
 
 ## 📦 Installation
 
@@ -36,16 +37,41 @@ bun install nitter-scraper-v2
 
 ## 🚀 Démarrage rapide
 
-### Utilisation basique
+### Utilisation basique avec profil utilisateur
 
 ```typescript
 import { fetchTweets } from "nitter-scraper-v2";
 
 async function main() {
-  const tweets = await fetchTweets("elonmusk", 3);
-  console.log(`Trouvé ${tweets.length} tweets`);
+  // Retourne maintenant un objet avec profil utilisateur + tweets
+  const result = await fetchTweets("elonmusk", 3);
+  
+  // Informations complètes du profil utilisateur
+  if (result.userProfile) {
+    const profile = result.userProfile;
+    console.log(`=== PROFIL UTILISATEUR ===`);
+    console.log(`Nom: ${profile.fullname} (@${profile.username})`);
+    console.log(`Description: ${profile.description}`);
+    console.log(`Vérifié: ${profile.isVerified ? `Oui (${profile.verificationType})` : 'Non'}`);
+    console.log(`Avatar: ${profile.avatarUrl}`);
+    console.log(`Bannière: ${profile.bannerUrl}`);
+    console.log(`Inscription: ${profile.joinDate}`);
+    console.log(`Localisation: ${profile.location}`);
+    console.log(`Site web: ${profile.website}`);
+    
+    console.log(`\n=== STATISTIQUES DU PROFIL ===`);
+    console.log(`Tweets: ${profile.stats.tweets.toLocaleString()}`);
+    console.log(`Abonnements: ${profile.stats.following.toLocaleString()}`);
+    console.log(`Abonnés: ${profile.stats.followers.toLocaleString()}`);
+    console.log(`Likes donnés: ${profile.stats.likes.toLocaleString()}`);
+    
+    // Ratio abonnés/abonnements
+    const ratio = profile.stats.followers / profile.stats.following;
+    console.log(`Ratio d'influence: ${ratio.toFixed(2)}:1`);
+  }
 
-  tweets.forEach((tweet) => {
+  console.log(`\n=== TWEETS (${result.tweets.length}) ===`);
+  result.tweets.forEach((tweet) => {
     // Informations de base avec nom complet
     console.log(`${tweet.fullname} (@${tweet.username}): ${tweet.text}`);
     
@@ -114,7 +140,7 @@ function fetchTweets(
   useProxies?: boolean,
   proxyOptions?: ProxyOptions,
   useConcurrency?: boolean  // NOUVEAU !
-): Promise<Tweet[]>;
+): Promise<FetchTweetsResponse>;
 ```
 
 #### Paramètres
@@ -165,6 +191,44 @@ const tweets = await fetchTweets("username", 3, true, proxyOptions);
 
 ## 📝 Types TypeScript (mis à jour)
 
+### Interface FetchTweetsResponse (NOUVELLE !)
+
+```typescript
+interface FetchTweetsResponse {
+  userProfile: UserProfile | null;  // Informations du profil utilisateur
+  tweets: Tweet[];                  // Liste des tweets
+}
+```
+
+### Interface UserProfile (NOUVELLE !)
+
+```typescript
+interface UserProfile {
+  username: string;              // Nom d'utilisateur (@username)
+  fullname: string;              // Nom complet affiché
+  description: string;           // Bio/description du profil
+  isVerified: boolean;           // Statut de vérification
+  verificationType: string | null; // Type de vérification
+  avatarUrl: string | null;      // URL de l'avatar
+  bannerUrl: string | null;      // URL de la bannière
+  stats: UserStats;              // Statistiques du profil
+  joinDate: string | null;       // Date d'inscription
+  location: string | null;       // Localisation
+  website: string | null;        // Site web
+}
+```
+
+### Interface UserStats (NOUVELLE !)
+
+```typescript
+interface UserStats {
+  tweets: number;      // Nombre de tweets
+  following: number;   // Nombre d'abonnements
+  followers: number;   // Nombre d'abonnés
+  likes: number;       // Nombre de likes donnés
+}
+```
+
 ### Interface Tweet (complète)
 
 ```typescript
@@ -172,15 +236,15 @@ interface Tweet {
   id: string;                    // ID unique du tweet
   text: string;                  // Contenu textuel du tweet
   username: string;              // Nom d'utilisateur de l'auteur
-  fullname: string;              // NOUVEAU ! Nom complet de l'auteur
-  isVerified: boolean;           // NOUVEAU ! Statut de vérification
-  verificationType: string | null; // NOUVEAU ! Type de vérification
+  fullname: string;              // Nom complet de l'auteur
+  isVerified: boolean;           // Statut de vérification
+  verificationType: string | null; // Type de vérification
   created_at: string;            // Date de création (chaîne ISO)
   timestamp: number | null;      // Timestamp Unix (millisecondes)
   imageTweet: string[];          // URLs des images attachées
   videoTweet: string[];          // URLs des vidéos attachées (legacy)
-  videos: VideoInfo[];           // NOUVEAU ! Informations détaillées des vidéos
-  stats: TweetStats;             // NOUVEAU ! Statistiques du tweet
+  videos: VideoInfo[];           // Informations détaillées des vidéos
+  stats: TweetStats;             // Statistiques du tweet
   avatarUrl: string | null;      // URL de l'avatar utilisateur
   cards: Card[];                 // Cartes de prévisualisation
   originalUrl: string;           // URL originale du tweet sur Twitter/X
@@ -272,27 +336,52 @@ nitter-scraper-v2/
 
 ## 💡 Exemples d'utilisation avancés
 
-### Analyse complète d'un compte
+### Analyse complète d'un compte avec profil utilisateur
 
 ```typescript
 import { fetchTweets } from "nitter-scraper-v2";
 
 async function analyserCompte(username: string) {
-  const tweets = await fetchTweets(username, 5, false, undefined, true);
+  const result = await fetchTweets(username, 5, false, undefined, true);
   
-  if (tweets.length === 0) {
+  if (result.tweets.length === 0) {
     console.log("Aucun tweet trouvé");
     return;
   }
   
-  const premierTweet = tweets[0];
+  // Analyse complète du profil utilisateur
+  if (result.userProfile) {
+    const profile = result.userProfile;
+    console.log(`=== ANALYSE DU PROFIL UTILISATEUR ===`);
+    console.log(`Nom complet: ${profile.fullname}`);
+    console.log(`Username: @${profile.username}`);
+    console.log(`Description: ${profile.description}`);
+    console.log(`Vérifié: ${profile.isVerified ? `Oui (${profile.verificationType})` : 'Non'}`);
+    console.log(`Avatar: ${profile.avatarUrl}`);
+    console.log(`Bannière: ${profile.bannerUrl}`);
+    console.log(`Date d'inscription: ${profile.joinDate}`);
+    console.log(`Localisation: ${profile.location}`);
+    console.log(`Site web: ${profile.website}`);
+    
+    console.log(`\n=== STATISTIQUES DU PROFIL ===`);
+    console.log(`Total tweets: ${profile.stats.tweets.toLocaleString()}`);
+    console.log(`Abonnements: ${profile.stats.following.toLocaleString()}`);
+    console.log(`Abonnés: ${profile.stats.followers.toLocaleString()}`);
+    console.log(`Likes donnés: ${profile.stats.likes.toLocaleString()}`);
+    
+    // Métriques calculées
+    const ratioInfluence = profile.stats.followers / profile.stats.following;
+    const tauxActivite = (profile.stats.tweets / Math.max(1, getDaysSinceJoin(profile.joinDate))).toFixed(2);
+    
+    console.log(`\n=== MÉTRIQUES D'INFLUENCE ===`);
+    console.log(`Ratio d'influence: ${ratioInfluence.toFixed(2)}:1`);
+    console.log(`Tweets par jour (moyenne): ${tauxActivite}`);
+    console.log(`Engagement potentiel: ${(profile.stats.followers / 1000).toFixed(1)}K followers`);
+  }
   
-  // Informations du compte
-  console.log(`=== ANALYSE DU COMPTE ===`);
-  console.log(`Nom: ${premierTweet.fullname}`);
-  console.log(`Username: @${premierTweet.username}`);
-  console.log(`Vérifié: ${premierTweet.isVerified ? `Oui (${premierTweet.verificationType})` : 'Non'}`);
-  console.log(`Avatar: ${premierTweet.avatarUrl}`);
+  // Analyse des tweets récents
+  const tweets = result.tweets;
+  console.log(`\n=== ANALYSE DES TWEETS RÉCENTS (${tweets.length}) ===`);
   
   // Statistiques d'engagement
   const totalLikes = tweets.reduce((sum, tweet) => sum + tweet.stats.likes, 0);
@@ -300,11 +389,11 @@ async function analyserCompte(username: string) {
   const totalComments = tweets.reduce((sum, tweet) => sum + tweet.stats.comments, 0);
   const totalViews = tweets.reduce((sum, tweet) => sum + tweet.stats.views, 0);
   
-  console.log(`\n=== STATISTIQUES D'ENGAGEMENT ===`);
-  console.log(`Total likes: ${totalLikes} (moyenne: ${Math.round(totalLikes / tweets.length)})`);
-  console.log(`Total retweets: ${totalRetweets} (moyenne: ${Math.round(totalRetweets / tweets.length)})`);
-  console.log(`Total commentaires: ${totalComments} (moyenne: ${Math.round(totalComments / tweets.length)})`);
-  console.log(`Total vues: ${totalViews} (moyenne: ${Math.round(totalViews / tweets.length)})`);
+  console.log(`Total engagement:`);
+  console.log(`  - Likes: ${totalLikes.toLocaleString()} (moyenne: ${Math.round(totalLikes / tweets.length)})`);
+  console.log(`  - Retweets: ${totalRetweets.toLocaleString()} (moyenne: ${Math.round(totalRetweets / tweets.length)})`);
+  console.log(`  - Commentaires: ${totalComments.toLocaleString()} (moyenne: ${Math.round(totalComments / tweets.length)})`);
+  console.log(`  - Vues: ${totalViews.toLocaleString()} (moyenne: ${Math.round(totalViews / tweets.length)})`);
   
   // Analyse des médias
   const tweetsAvecImages = tweets.filter(t => t.imageTweet.length > 0);
@@ -324,6 +413,15 @@ async function analyserCompte(username: string) {
   console.log(`\n=== TWEET LE PLUS POPULAIRE ===`);
   console.log(`"${tweetPopulaire.text.substring(0, 100)}..."`);
   console.log(`${tweetPopulaire.stats.likes} likes, ${tweetPopulaire.stats.retweets} retweets`);
+  console.log(`Taux d'engagement: ${((tweetPopulaire.stats.likes + tweetPopulaire.stats.retweets) / Math.max(1, tweetPopulaire.stats.views) * 100).toFixed(2)}%`);
+}
+
+// Fonction utilitaire pour calculer les jours depuis l'inscription
+function getDaysSinceJoin(joinDate: string | null): number {
+  if (!joinDate) return 365; // Valeur par défaut
+  const join = new Date(joinDate);
+  const now = new Date();
+  return Math.max(1, Math.floor((now.getTime() - join.getTime()) / (1000 * 60 * 60 * 24)));
 }
 ```
 
@@ -399,7 +497,7 @@ async function analyserVideos(username: string) {
   console.log(`Total vidéos: ${totalVideos}`);
   console.log(`Vidéos avec URL: ${videosAvecUrl}/${totalVideos}`);
   console.log(`Vidéos avec miniature: ${videosAvecPoster}/${totalVideos}`);
-}
+  }
 ```
 
 ### Filtrage avancé par type de vérification
@@ -628,13 +726,19 @@ Ce projet est sous licence MIT. Voir le fichier LICENSE pour plus de détails.
 
 ## 🤝 Contribution
 
-Les contributions sont les bienvenues ! N'hésitez pas à ouvrir des issues ou soumettre des pull requests pour :
+Les contributions sont les bienvenues ! N'hésitez pas à ouvrir des issues ou soumettre des pull requests sur [GitHub](https://github.com/FaresSofiane/nitter-scraper-v2) pour :
 
-- Améliorer la détection des vidéos
+- Améliorer l'extraction des profils utilisateur
 - Ajouter de nouveaux types de vérification
 - Optimiser les performances du mode concurrent
 - Corriger les bugs de parsing des statistiques
 
+## 👨‍💻 Auteur
+
+**Fares Sofiane**
+- GitHub: [@FaresSofiane](https://github.com/FaresSofiane)
+- Repository: [nitter-scraper-v2](https://github.com/FaresSofiane/nitter-scraper-v2)
+
 ---
 
-*Documentation mise à jour pour nitter-scraper-v2 avec les nouvelles fonctionnalités : informations de vérification, mode concurrent, statistiques des tweets et extraction détaillée des vidéos.* 
+*Documentation complète pour nitter-scraper-v2 avec extraction de profils utilisateur, statistiques détaillées, mode concurrent et support proxy avancé.* 

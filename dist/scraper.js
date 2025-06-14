@@ -492,7 +492,11 @@ async function fetchSinglePage(username, cursor, useProxies, seenTweets) {
         }
     }
     const html = response.data;
-    return extractTweetsFromHtml(html, username, seenTweets);
+    const result = extractTweetsFromHtml(html, username, seenTweets);
+    return {
+        ...result,
+        html
+    };
 }
 /**
  * Fetch tweets for a given username
@@ -503,6 +507,7 @@ async function fetchTweets(username, maxPages = 3, useProxies = false, proxyOpti
         await loadProxies(useProxies, proxyOptions);
         const allTweets = [];
         const seenTweets = new Set();
+        let userProfile = null;
         if (useConcurrency && maxPages > 1) {
             // Mode concurrent optimisé : récupération séquentielle rapide sans délais
             console.log(`🚀 Mode concurrent activé - récupération rapide sans délais de ${maxPages} pages`);
@@ -512,6 +517,10 @@ async function fetchTweets(username, maxPages = 3, useProxies = false, proxyOpti
             while (pagesProcessed < maxPages) {
                 try {
                     const result = await fetchSinglePage(username, nextCursor, useProxies, seenTweets);
+                    // Extraire le profil utilisateur depuis la première page
+                    if (pagesProcessed === 0 && result.html) {
+                        userProfile = extractUserProfile(result.html, username);
+                    }
                     // Ajouter les tweets
                     for (const tweet of result.tweets) {
                         if (!seenTweets.has(tweet.id)) {
@@ -541,6 +550,10 @@ async function fetchTweets(username, maxPages = 3, useProxies = false, proxyOpti
             let pagesProcessed = 0;
             do {
                 const result = await fetchSinglePage(username, nextCursor, useProxies, seenTweets);
+                // Extraire le profil utilisateur depuis la première page
+                if (pagesProcessed === 0 && result.html) {
+                    userProfile = extractUserProfile(result.html, username);
+                }
                 // Add tweets to the result and update seen tweets
                 for (const tweet of result.tweets) {
                     allTweets.push(tweet);
@@ -556,13 +569,132 @@ async function fetchTweets(username, maxPages = 3, useProxies = false, proxyOpti
                 }
             } while (nextCursor && pagesProcessed < maxPages);
         }
-        return allTweets;
+        return {
+            userProfile,
+            tweets: allTweets
+        };
     }
     catch (error) {
         console.error(`Error fetching tweets: ${error}`);
-        return [];
+        return {
+            userProfile: null,
+            tweets: []
+        };
     }
     finally {
         // Pas de nettoyage de fichier nécessaire car on utilise axios directement
+    }
+}
+/**
+ * Extract user profile information from HTML content
+ */
+function extractUserProfile(html, username) {
+    const $ = cheerio.load(html);
+    try {
+        // Extraire le nom complet
+        const fullnameElement = $(".profile-card .profile-card-fullname");
+        const fullname = fullnameElement.text().trim() || username;
+        // Extraire la description/bio
+        const descriptionElement = $(".profile-card .profile-bio");
+        const description = descriptionElement.text().trim() || "";
+        // Vérifier le statut de vérification
+        const verifiedElement = $(".profile-card .verified-icon");
+        let isVerified = false;
+        let verificationType = null;
+        if (verifiedElement.length > 0) {
+            isVerified = true;
+            const classes = verifiedElement.attr("class") || "";
+            if (classes.includes("business")) {
+                verificationType = "business";
+            }
+            else if (classes.includes("blue")) {
+                verificationType = "blue";
+            }
+            else {
+                verificationType = "verified";
+            }
+        }
+        // Extraire l'URL de l'avatar
+        const avatarElement = $(".profile-card .profile-card-avatar img");
+        let avatarUrl = null;
+        if (avatarElement.length > 0) {
+            avatarUrl = avatarElement.attr("src") || null;
+            if (avatarUrl && !avatarUrl.startsWith("http")) {
+                avatarUrl = `${BASE_URL}${avatarUrl}`;
+            }
+        }
+        // Extraire l'URL de la bannière
+        const bannerElement = $(".profile-banner img");
+        let bannerUrl = null;
+        if (bannerElement.length > 0) {
+            bannerUrl = bannerElement.attr("src") || null;
+            if (bannerUrl && !bannerUrl.startsWith("http")) {
+                bannerUrl = `${BASE_URL}${bannerUrl}`;
+            }
+        }
+        // Extraire les statistiques du profil
+        const stats = {
+            tweets: 0,
+            following: 0,
+            followers: 0,
+            likes: 0
+        };
+        // Parser les statistiques depuis .profile-statlist li
+        $(".profile-statlist li").each((_, statElement) => {
+            const $stat = $(statElement);
+            const headerText = $stat.find(".profile-stat-header").text().trim().toLowerCase();
+            const numText = $stat.find(".profile-stat-num").text().trim();
+            // Convertir le nombre (gérer les virgules et les formats comme "2,303,191")
+            const number = parseInt(numText.replace(/,/g, ''), 10) || 0;
+            if (headerText.includes("tweet")) {
+                stats.tweets = number;
+            }
+            else if (headerText.includes("following")) {
+                stats.following = number;
+            }
+            else if (headerText.includes("follower")) {
+                stats.followers = number;
+            }
+            else if (headerText.includes("like")) {
+                stats.likes = number;
+            }
+        });
+        // Extraire la date d'inscription
+        const joinDateElement = $(".profile-joindate");
+        let joinDate = null;
+        if (joinDateElement.length > 0) {
+            const joinText = joinDateElement.text().trim();
+            // Extraire la date du format "Joined Month Year"
+            const dateMatch = joinText.match(/joined\s+(.+)/i);
+            if (dateMatch) {
+                joinDate = dateMatch[1].trim();
+            }
+        }
+        // Extraire la localisation
+        const locationElement = $(".profile-location");
+        const location = locationElement.text().trim() || null;
+        // Extraire le site web
+        const websiteElement = $(".profile-website a");
+        let website = null;
+        if (websiteElement.length > 0) {
+            website = websiteElement.attr("href") || websiteElement.text().trim() || null;
+        }
+        return {
+            username,
+            fullname,
+            description,
+            isVerified,
+            verificationType,
+            avatarUrl,
+            bannerUrl,
+            stats,
+            joinDate,
+            location,
+            website
+        };
+    }
+    catch (error) {
+        console.error(`Error extracting user profile: ${error}`);
+        return null;
     }
 }

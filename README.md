@@ -2,9 +2,15 @@
 
 <div align="center">
 
-**Enhanced fork** of the original [nitter-scraper](https://www.npmjs.com/package/nitter-scraper) package with advanced features and complete proxy support.
+**Advanced Twitter/X scraping solution** powered by Nitter with comprehensive proxy support and user profile extraction.
 
-**Fork amélioré** du package original [nitter-scraper](https://www.npmjs.com/package/nitter-scraper) avec des fonctionnalités avancées et un support proxy complet.
+_Enhanced fork of the original [nitter-scraper](https://www.npmjs.com/package/nitter-scraper) package with extended features and enterprise-grade capabilities._
+
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
+[![MIT License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](https://choosealicense.com/licenses/mit/)
+
+**[GitHub Repository](https://github.com/FaresSofiane/nitter-scraper-v2)** • **[Author: Fares Sofiane](https://github.com/FaresSofiane)**
 
 ---
 
@@ -21,20 +27,19 @@
 <details open>
 <summary><b>📖 Click to expand English documentation</b></summary>
 
-A powerful TypeScript package for scraping tweets from Nitter without authentication. This enhanced version adds proxy support, media extraction (images/videos), preview cards, account verification info, tweet statistics, concurrent mode and much more!
+A comprehensive TypeScript package for extracting tweets and user profiles from Nitter without requiring authentication. This enhanced fork of the original [nitter-scraper](https://www.npmjs.com/package/nitter-scraper) provides advanced proxy management, complete media extraction, user profile statistics, and high-performance concurrent processing.
 
-## ✨ Features
+## ✨ Key Features
 
-- 🚀 **Authentication-free scraping** - No Twitter API keys needed
-- 🔄 **Automatic pagination handling** - Fetches multiple pages automatically
-- 🛡️ **Rate limiting protection** - Smart delays between requests
-- 🌐 **Advanced proxy support** - Three modes: no proxy, custom list, or download URL
-- 📷 **Media extraction** - Images, videos with detailed info and preview cards
-- 👤 **User information** - Avatar, full name, verification status and type
-- 📊 **Tweet statistics** - Comments, retweets, quotes, likes, views
-- ⚡ **Concurrent mode** - Fast sequential fetching without delays
-- 🔧 **Native TypeScript** - Complete typings and intellisense
-- ⚡ **Optimized performance** - Error handling and automatic retry
+- 🚀 **Authentication-free scraping** - No Twitter API keys required
+- 👤 **Complete user profiles** - Extract user information, statistics, and banner images
+- 🔄 **Intelligent pagination** - Automatic multi-page processing with cursor management
+- 🛡️ **Advanced proxy support** - Multiple proxy modes with automatic failover
+- 📷 **Comprehensive media extraction** - Images, videos, and preview cards
+- 📊 **Detailed statistics** - Tweet engagement metrics and user profile stats
+- ⚡ **High-performance modes** - Concurrent processing for faster data collection
+- 🔧 **Full TypeScript support** - Complete type definitions and IntelliSense
+- 🛠️ **Enterprise-ready** - Error handling, retry logic, and production stability
 
 ## 📦 Installation
 
@@ -42,45 +47,55 @@ A powerful TypeScript package for scraping tweets from Nitter without authentica
 # Install as a library
 npm install nitter-scraper-v2
 
-# Or install globally to use as CLI
+# Or install globally for CLI usage
 npm install -g nitter-scraper-v2
 ```
 
 ## 🚀 Quick Start
 
-### As a Library
+### Basic Usage with User Profile
 
 ```typescript
 import { fetchTweets } from "nitter-scraper-v2";
 
 async function main() {
-  // Basic usage
-  const tweets = await fetchTweets("elonmusk", 3);
-  console.log(`Found ${tweets.length} tweets`);
+  // Fetch tweets and user profile information
+  const result = await fetchTweets("elonmusk", 3);
 
-  tweets.forEach((tweet) => {
+  // Display user profile information
+  if (result.userProfile) {
+    const profile = result.userProfile;
+    console.log(`=== USER PROFILE ===`);
+    console.log(`Name: ${profile.fullname} (@${profile.username})`);
+    console.log(`Description: ${profile.description}`);
+    console.log(
+      `Verified: ${
+        profile.isVerified ? `Yes (${profile.verificationType})` : "No"
+      }`
+    );
+    console.log(`Avatar: ${profile.avatarUrl}`);
+    console.log(`Banner: ${profile.bannerUrl}`);
+    console.log(`Joined: ${profile.joinDate}`);
+    console.log(`Location: ${profile.location}`);
+    console.log(`Website: ${profile.website}`);
+
+    console.log(`\n=== PROFILE STATISTICS ===`);
+    console.log(`Tweets: ${profile.stats.tweets.toLocaleString()}`);
+    console.log(`Following: ${profile.stats.following.toLocaleString()}`);
+    console.log(`Followers: ${profile.stats.followers.toLocaleString()}`);
+    console.log(`Likes: ${profile.stats.likes.toLocaleString()}`);
+  }
+
+  // Display tweets
+  console.log(`\n=== TWEETS (${result.tweets.length}) ===`);
+  result.tweets.forEach((tweet) => {
     console.log(`${tweet.fullname} (@${tweet.username}): ${tweet.text}`);
-
-    // Verification info
-    if (tweet.isVerified) {
-      console.log(`✅ Verified (${tweet.verificationType})`);
-    }
-
-    // Statistics
     console.log(
       `📊 ${tweet.stats.likes} likes, ${tweet.stats.retweets} retweets`
     );
 
-    // Media
-    if (tweet.imageTweet.length > 0) {
-      console.log(`📷 Images: ${tweet.imageTweet.length}`);
-    }
     if (tweet.videos.length > 0) {
       console.log(`🎥 Videos: ${tweet.videos.length}`);
-      tweet.videos.forEach((video) => {
-        console.log(`  - Video: ${video.videoUrl}`);
-        console.log(`  - Poster: ${video.posterUrl}`);
-      });
     }
   });
 }
@@ -88,38 +103,31 @@ async function main() {
 main().catch(console.error);
 ```
 
-### Concurrent Mode for Faster Scraping
+### High-Performance Concurrent Mode
 
 ```typescript
 import { fetchTweets } from "nitter-scraper-v2";
 
 async function fastScraping() {
-  // Enable concurrent mode for faster fetching (no delays between requests)
-  const tweets = await fetchTweets(
+  // Enable concurrent mode for faster processing
+  const result = await fetchTweets(
     "username",
     5, // maxPages
     false, // useProxies
     undefined, // proxyOptions
-    true // useConcurrency - NEW!
+    true // useConcurrency
   );
 
-  console.log(`Fetched ${tweets.length} tweets quickly!`);
+  console.log(`Processed ${result.tweets.length} tweets efficiently`);
+  console.log(
+    `User: ${result.userProfile?.fullname} with ${result.userProfile?.stats.followers} followers`
+  );
 }
 ```
 
-### As a CLI Tool
+## 📚 Complete API Reference
 
-```bash
-# Run the scraper using Bun
-bun run cli
-
-# Or if installed globally
-nitter-scraper-v2
-```
-
-## 📚 Complete API
-
-### fetchTweets
+### fetchTweets Function
 
 ```typescript
 function fetchTweets(
@@ -127,81 +135,117 @@ function fetchTweets(
   maxPages?: number,
   useProxies?: boolean,
   proxyOptions?: ProxyOptions,
-  useConcurrency?: boolean // NEW!
-): Promise<Tweet[]>;
+  useConcurrency?: boolean
+): Promise<FetchTweetsResponse>;
 ```
 
 #### Parameters
 
-| Parameter        | Type           | Default      | Description                                      |
-| ---------------- | -------------- | ------------ | ------------------------------------------------ |
-| `username`       | `string`       | **required** | Twitter username (without @)                     |
-| `maxPages`       | `number`       | `3`          | Maximum number of pages to fetch                 |
-| `useProxies`     | `boolean`      | `false`      | Enable proxy usage                               |
-| `proxyOptions`   | `ProxyOptions` | `undefined`  | Proxy configuration options                      |
-| `useConcurrency` | `boolean`      | `false`      | **NEW!** Enable fast sequential mode (no delays) |
+| Parameter        | Type           | Default      | Description                             |
+| ---------------- | -------------- | ------------ | --------------------------------------- |
+| `username`       | `string`       | **required** | Twitter username (without @)            |
+| `maxPages`       | `number`       | `3`          | Maximum number of pages to fetch        |
+| `useProxies`     | `boolean`      | `false`      | Enable proxy usage                      |
+| `proxyOptions`   | `ProxyOptions` | `undefined`  | Proxy configuration options             |
+| `useConcurrency` | `boolean`      | `false`      | Enable high-performance sequential mode |
 
 ## 🌐 Proxy Management
 
-This version offers three proxy management modes:
-
-### 1. No proxy (default)
+### 1. Direct Operation (Default)
 
 ```typescript
-const tweets = await fetchTweets("username", 3, false);
+const result = await fetchTweets("username", 3, false);
 ```
 
-### 2. Custom proxy list
+### 2. Custom Proxy List
 
 ```typescript
 import { fetchTweets, ProxyOptions } from "nitter-scraper-v2";
 
 const proxyOptions: ProxyOptions = {
   proxyList: [
-    "192.168.1.1:8080:user1:pass1",
-    "192.168.1.2:8080:user2:pass2",
-    "192.168.1.3:8080:user3:pass3",
+    "proxy1.example.com:8080:user1:pass1",
+    "proxy2.example.com:8080:user2:pass2",
+    "proxy3.example.com:8080:user3:pass3",
   ],
 };
 
-const tweets = await fetchTweets("username", 3, true, proxyOptions);
+const result = await fetchTweets("username", 3, true, proxyOptions);
 ```
 
-### 3. Proxy download URL
+### 3. Remote Proxy Configuration
 
 ```typescript
 const proxyOptions: ProxyOptions = {
   proxyUrl: "https://your-server.com/proxies.txt",
 };
 
-const tweets = await fetchTweets("username", 3, true, proxyOptions);
+const result = await fetchTweets("username", 3, true, proxyOptions);
 ```
 
-## 📝 TypeScript Types
+## 📝 TypeScript Definitions
 
-### Tweet (Updated)
+### FetchTweetsResponse
 
 ```typescript
-interface Tweet {
-  id: string; // Unique tweet ID
-  text: string; // Tweet text content
-  username: string; // Author username
-  fullname: string; // NEW! Author full name
-  isVerified: boolean; // NEW! Verification status
-  verificationType: string | null; // NEW! Verification type: "business", "blue", "verified"
-  created_at: string; // Creation date (ISO string)
-  timestamp: number | null; // Unix timestamp (milliseconds)
-  imageTweet: string[]; // Attached image URLs
-  videoTweet: string[]; // Attached video URLs (legacy)
-  videos: VideoInfo[]; // NEW! Detailed video information
-  stats: TweetStats; // NEW! Tweet statistics
-  avatarUrl: string | null; // User avatar URL
-  cards: Card[]; // Preview cards
-  originalUrl: string; // Original tweet URL on Twitter/X
+interface FetchTweetsResponse {
+  userProfile: UserProfile | null; // Complete user profile information
+  tweets: Tweet[]; // Array of extracted tweets
 }
 ```
 
-### TweetStats (NEW!)
+### UserProfile
+
+```typescript
+interface UserProfile {
+  username: string; // Username (@username)
+  fullname: string; // Full display name
+  description: string; // Profile bio/description
+  isVerified: boolean; // Verification status
+  verificationType: string | null; // Verification type: "business", "blue", "verified"
+  avatarUrl: string | null; // Profile avatar URL
+  bannerUrl: string | null; // Profile banner URL
+  stats: UserStats; // Profile statistics
+  joinDate: string | null; // Account creation date
+  location: string | null; // User location
+  website: string | null; // Website URL
+}
+```
+
+### UserStats
+
+```typescript
+interface UserStats {
+  tweets: number; // Total number of tweets
+  following: number; // Number of accounts following
+  followers: number; // Number of followers
+  likes: number; // Total likes given
+}
+```
+
+### Tweet
+
+```typescript
+interface Tweet {
+  id: string; // Unique tweet identifier
+  text: string; // Tweet content
+  username: string; // Author username
+  fullname: string; // Author display name
+  isVerified: boolean; // Author verification status
+  verificationType: string | null; // Verification type
+  created_at: string; // Creation timestamp (ISO)
+  timestamp: number | null; // Unix timestamp (milliseconds)
+  imageTweet: string[]; // Attached image URLs
+  videoTweet: string[]; // Attached video URLs (legacy)
+  videos: VideoInfo[]; // Detailed video information
+  stats: TweetStats; // Engagement statistics
+  avatarUrl: string | null; // Author avatar URL
+  cards: Card[]; // Preview cards
+  originalUrl: string; // Original Twitter/X URL
+}
+```
+
+### TweetStats
 
 ```typescript
 interface TweetStats {
@@ -213,149 +257,57 @@ interface TweetStats {
 }
 ```
 
-### VideoInfo (NEW!)
+### VideoInfo
 
 ```typescript
 interface VideoInfo {
-  posterUrl: string | null; // Video thumbnail/poster image URL
+  posterUrl: string | null; // Video thumbnail URL
   videoUrl: string | null; // Video file URL
 }
 ```
 
-### ProxyOptions
+## 💡 Advanced Usage Examples
 
-```typescript
-export type ProxyOptions = {
-  proxyList?: string[]; // Proxy list in "host:port:username:password" format
-  proxyUrl?: string; // URL to download proxy list
-};
-```
-
-### Card
-
-```typescript
-interface Card {
-  type: "card"; // Card type
-  url: string | null; // Destination URL
-  imageUrl: string | null; // Preview image URL
-  title: string; // Card title
-  description: string; // Card description
-  destination: string; // Destination domain
-}
-```
-
-## 🔧 Advanced Configuration
-
-### Concurrent Mode vs Sequential Mode
-
-```typescript
-// Sequential mode (default) - 2 second delays between requests
-const tweetsSequential = await fetchTweets(
-  "username",
-  5,
-  false,
-  undefined,
-  false
-);
-
-// Concurrent mode - no delays, faster fetching
-const tweetsConcurrent = await fetchTweets(
-  "username",
-  5,
-  false,
-  undefined,
-  true
-);
-```
-
-**Note**: Concurrent mode doesn't fetch pages in parallel (due to cursor-based pagination), but removes delays between sequential requests for faster overall performance.
-
-### Proxy Format
-
-Proxies must be in the format: `host:port:username:password`
-
-Example:
-
-```
-proxy1.example.com:8080:myuser:mypass
-192.168.1.100:3128:admin:secret123
-proxy-server.net:1080:client:password
-```
-
-### Error Handling
-
-```typescript
-try {
-  const tweets = await fetchTweets("username", 5, true, proxyOptions, true);
-
-  if (tweets.length === 0) {
-    console.log("No tweets found");
-  } else {
-    console.log(`${tweets.length} tweets retrieved successfully`);
-  }
-} catch (error) {
-  console.error("Scraping error:", error);
-}
-```
-
-### Filtering and Processing
-
-```typescript
-const tweets = await fetchTweets("username", 3);
-
-// Filter verified accounts
-const verifiedTweets = tweets.filter((tweet) => tweet.isVerified);
-
-// Filter by verification type
-const businessAccounts = tweets.filter(
-  (tweet) => tweet.verificationType === "business"
-);
-const blueAccounts = tweets.filter(
-  (tweet) => tweet.verificationType === "blue"
-);
-
-// Filter tweets with high engagement
-const popularTweets = tweets.filter((tweet) => tweet.stats.likes > 100);
-
-// Filter tweets with videos
-const tweetsWithVideos = tweets.filter((tweet) => tweet.videos.length > 0);
-
-// Extract all video information
-const allVideos = tweets.flatMap((tweet) => tweet.videos);
-console.log(`Found ${allVideos.length} videos total`);
-
-// Filter recent tweets (last 24h)
-const recentTweets = tweets.filter((tweet) => {
-  if (!tweet.timestamp) return false;
-  const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
-  return tweet.timestamp > oneDayAgo;
-});
-
-// Extract all media
-const allImages = tweets.flatMap((tweet) => tweet.imageTweet);
-const allVideos = tweets.flatMap((tweet) => tweet.videoTweet);
-```
-
-## 💡 Usage Examples
-
-### Account Analysis
+### Complete Account Analysis
 
 ```typescript
 async function analyzeAccount(username: string) {
-  const tweets = await fetchTweets(username, 5, false, undefined, true);
+  const result = await fetchTweets(username, 5, false, undefined, true);
 
-  if (tweets.length === 0) {
+  if (result.tweets.length === 0) {
     console.log("No tweets found");
     return;
   }
 
-  const firstTweet = tweets[0];
-  console.log(`Account: ${firstTweet.fullname} (@${firstTweet.username})`);
-  console.log(
-    `Verified: ${
-      firstTweet.isVerified ? `Yes (${firstTweet.verificationType})` : "No"
-    }`
-  );
+  // Profile analysis
+  if (result.userProfile) {
+    const profile = result.userProfile;
+    console.log(`=== PROFILE ANALYSIS ===`);
+    console.log(`Account: ${profile.fullname} (@${profile.username})`);
+    console.log(`Description: ${profile.description}`);
+    console.log(
+      `Verified: ${
+        profile.isVerified ? `Yes (${profile.verificationType})` : "No"
+      }`
+    );
+    console.log(`Joined: ${profile.joinDate}`);
+    console.log(`Location: ${profile.location}`);
+    console.log(`Website: ${profile.website}`);
+
+    console.log(`\n=== PROFILE STATISTICS ===`);
+    console.log(`Total tweets: ${profile.stats.tweets.toLocaleString()}`);
+    console.log(`Following: ${profile.stats.following.toLocaleString()}`);
+    console.log(`Followers: ${profile.stats.followers.toLocaleString()}`);
+    console.log(`Likes given: ${profile.stats.likes.toLocaleString()}`);
+
+    // Calculate influence metrics
+    const ratio = profile.stats.followers / profile.stats.following;
+    console.log(`Influence ratio: ${ratio.toFixed(2)}:1`);
+  }
+
+  // Tweet analysis
+  const tweets = result.tweets;
+  console.log(`\n=== TWEET ANALYSIS (${tweets.length} recent tweets) ===`);
 
   // Calculate engagement statistics
   const totalLikes = tweets.reduce((sum, tweet) => sum + tweet.stats.likes, 0);
@@ -363,17 +315,39 @@ async function analyzeAccount(username: string) {
     (sum, tweet) => sum + tweet.stats.retweets,
     0
   );
+  const totalComments = tweets.reduce(
+    (sum, tweet) => sum + tweet.stats.comments,
+    0
+  );
   const avgLikes = Math.round(totalLikes / tweets.length);
   const avgRetweets = Math.round(totalRetweets / tweets.length);
+  const avgComments = Math.round(totalComments / tweets.length);
 
-  console.log(`Average engagement: ${avgLikes} likes, ${avgRetweets} retweets`);
+  console.log(`Average engagement per tweet:`);
+  console.log(`  - Likes: ${avgLikes}`);
+  console.log(`  - Retweets: ${avgRetweets}`);
+  console.log(`  - Comments: ${avgComments}`);
 
-  // Media statistics
+  // Media usage analysis
   const tweetsWithImages = tweets.filter((t) => t.imageTweet.length > 0).length;
   const tweetsWithVideos = tweets.filter((t) => t.videos.length > 0).length;
+  const tweetsWithCards = tweets.filter((t) => t.cards.length > 0).length;
 
+  console.log(`\nMedia usage:`);
   console.log(
-    `Media usage: ${tweetsWithImages} tweets with images, ${tweetsWithVideos} with videos`
+    `  - Images: ${tweetsWithImages}/${tweets.length} tweets (${Math.round(
+      (tweetsWithImages / tweets.length) * 100
+    )}%)`
+  );
+  console.log(
+    `  - Videos: ${tweetsWithVideos}/${tweets.length} tweets (${Math.round(
+      (tweetsWithVideos / tweets.length) * 100
+    )}%)`
+  );
+  console.log(
+    `  - Cards: ${tweetsWithCards}/${tweets.length} tweets (${Math.round(
+      (tweetsWithCards / tweets.length) * 100
+    )}%)`
   );
 }
 ```
@@ -384,7 +358,7 @@ async function analyzeAccount(username: string) {
 async function comparePerformance(username: string) {
   console.log("Testing sequential mode...");
   const startSequential = Date.now();
-  const tweetsSequential = await fetchTweets(
+  const resultSequential = await fetchTweets(
     username,
     3,
     false,
@@ -395,7 +369,7 @@ async function comparePerformance(username: string) {
 
   console.log("Testing concurrent mode...");
   const startConcurrent = Date.now();
-  const tweetsConcurrent = await fetchTweets(
+  const resultConcurrent = await fetchTweets(
     username,
     3,
     false,
@@ -405,208 +379,138 @@ async function comparePerformance(username: string) {
   const timeConcurrent = Date.now() - startConcurrent;
 
   console.log(
-    `Sequential: ${tweetsSequential.length} tweets in ${timeSequential}ms`
+    `Sequential: ${resultSequential.tweets.length} tweets in ${timeSequential}ms`
   );
   console.log(
-    `Concurrent: ${tweetsConcurrent.length} tweets in ${timeConcurrent}ms`
+    `Concurrent: ${resultConcurrent.tweets.length} tweets in ${timeConcurrent}ms`
   );
   console.log(
-    `Speed improvement: ${Math.round((timeSequential / timeConcurrent) * 100)}%`
+    `Performance improvement: ${Math.round(
+      (timeSequential / timeConcurrent) * 100
+    )}%`
   );
 }
 ```
 
-### Video Extraction
-
-```typescript
-async function extractVideos(username: string) {
-  const tweets = await fetchTweets(username, 5, false, undefined, true);
-
-  const videosFound = tweets.filter((tweet) => tweet.videos.length > 0);
-
-  console.log(`Found ${videosFound.length} tweets with videos`);
-
-  videosFound.forEach((tweet, index) => {
-    console.log(`\nTweet ${index + 1}: ${tweet.text.substring(0, 50)}...`);
-    tweet.videos.forEach((video, videoIndex) => {
-      console.log(`  Video ${videoIndex + 1}:`);
-      console.log(`    - Video URL: ${video.videoUrl}`);
-      console.log(`    - Poster URL: ${video.posterUrl}`);
-    });
-  });
-}
-```
-
-### Scraping with automatic retry
-
-```typescript
-async function scrapeWithRetry(username: string, maxRetries = 3) {
-  for (let i = 0; i < maxRetries; i++) {
-    try {
-      const tweets = await fetchTweets(username, 3, true, undefined, true);
-      return tweets;
-    } catch (error) {
-      console.log(`Attempt ${i + 1} failed:`, error);
-      if (i === maxRetries - 1) throw error;
-
-      // Wait before retrying
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-    }
-  }
-}
-```
-
-### Content Analysis
-
-```typescript
-async function analyzeTweets(username: string) {
-  const tweets = await fetchTweets(username, 5, false, undefined, true);
-
-  const stats = {
-    total: tweets.length,
-    verified: tweets[0]?.isVerified || false,
-    verificationType: tweets[0]?.verificationType || null,
-    withImages: tweets.filter((t) => t.imageTweet.length > 0).length,
-    withVideos: tweets.filter((t) => t.videos.length > 0).length,
-    withCards: tweets.filter((t) => t.cards.length > 0).length,
-    avgLength:
-      tweets.reduce((sum, t) => sum + t.text.length, 0) / tweets.length,
-    totalLikes: tweets.reduce((sum, t) => sum + t.stats.likes, 0),
-    totalRetweets: tweets.reduce((sum, t) => sum + t.stats.retweets, 0),
-    avgEngagement:
-      tweets.reduce((sum, t) => sum + t.stats.likes + t.stats.retweets, 0) /
-      tweets.length,
-  };
-
-  console.log("Tweet statistics:", stats);
-  return stats;
-}
-```
-
-### Export to JSON
+### Data Export
 
 ```typescript
 import * as fs from "fs";
 
-async function exportTweets(username: string, filename: string) {
-  const tweets = await fetchTweets(username, 10, true, undefined, true);
+async function exportCompleteAnalysis(username: string, filename: string) {
+  const result = await fetchTweets(username, 10, false, undefined, true);
 
   const exportData = {
-    username,
-    scrapedAt: new Date().toISOString(),
-    totalTweets: tweets.length,
-    accountInfo:
-      tweets.length > 0
-        ? {
-            fullname: tweets[0].fullname,
-            isVerified: tweets[0].isVerified,
-            verificationType: tweets[0].verificationType,
-            avatarUrl: tweets[0].avatarUrl,
-          }
-        : null,
-    tweets,
+    metadata: {
+      username,
+      exportedAt: new Date().toISOString(),
+      version: "nitter-scraper-v2",
+      repository: "https://github.com/FaresSofiane/nitter-scraper-v2",
+    },
+    userProfile: result.userProfile,
+    statistics: {
+      totalTweets: result.tweets.length,
+      totalLikes: result.tweets.reduce((sum, t) => sum + t.stats.likes, 0),
+      totalRetweets: result.tweets.reduce(
+        (sum, t) => sum + t.stats.retweets,
+        0
+      ),
+      averageEngagement:
+        result.tweets.reduce(
+          (sum, t) => sum + t.stats.likes + t.stats.retweets,
+          0
+        ) / result.tweets.length,
+    },
+    tweets: result.tweets,
   };
 
   fs.writeFileSync(filename, JSON.stringify(exportData, null, 2));
-  console.log(`${tweets.length} tweets exported to ${filename}`);
+  console.log(`Analysis exported to ${filename}`);
 }
-
-// Usage
-exportTweets("elonmusk", "elonmusk_tweets.json");
 ```
 
-## ⚡ Performance and Optimization
+## ⚡ Performance & Optimization
 
-### Recommendations
+### Performance Modes
 
-- **Concurrent mode**: Use `useConcurrency: true` for faster scraping when you need multiple pages
-- **Multiple pages**: Limit the number of pages to avoid timeouts
-- **Proxies**: Use quality proxies to avoid blocking
-- **Delays**: Default delay between requests is 2 seconds (removed in concurrent mode)
-- **Retry**: System automatically retries up to 3 times per request
+| Mode       | Use Case             | Speed  | Risk Level |
+| ---------- | -------------------- | ------ | ---------- |
+| Sequential | Production stable    | Normal | Low        |
+| Concurrent | Fast data collection | High   | Medium     |
 
-### Performance Comparison
+### Best Practices
 
-| Mode       | 3 Pages | 5 Pages | 10 Pages |
-| ---------- | ------- | ------- | -------- |
-| Sequential | ~8s     | ~12s    | ~22s     |
-| Concurrent | ~3s     | ~5s     | ~8s      |
+- **Concurrent mode**: Use for rapid data collection (1-10 pages)
+- **Proxy rotation**: Essential for large-scale operations
+- **Rate limiting**: Respect Nitter instance limitations
+- **Error handling**: Implement retry logic for production use
 
-### Limitations
+## 🛡️ Security & Compliance
 
-- **Rate limiting**: Nitter may limit too frequent requests
-- **Availability**: Nitter instances may be temporarily unavailable
-- **Proxies**: Failed proxies are automatically removed from the list
-- **Pagination**: True concurrency isn't possible due to cursor-based pagination
-
-## 🛡️ Security and Best Practices
-
-### Proxy Management
+### Proxy Security
 
 ```typescript
-// ✅ Good: Proxies with authentication
+// ✅ Recommended: Authenticated proxies
 const secureProxyOptions: ProxyOptions = {
-  proxyList: ["premium-proxy.com:8080:myuser:strongpassword"],
+  proxyList: ["premium-proxy.com:8080:username:password"],
 };
 
 // ❌ Avoid: Public proxies without authentication
 const unsecureProxyOptions: ProxyOptions = {
-  proxyList: [
-    "free-proxy.com:8080::", // No authentication
-  ],
+  proxyList: ["free-proxy.com:8080::"],
 };
 ```
 
-### Respecting Limits
+### Responsible Usage
 
 ```typescript
-// ✅ Good: Reasonable limitation
-const tweets = await fetchTweets("username", 3); // Max 3 pages
+// ✅ Good: Reasonable limits
+const result = await fetchTweets("username", 5);
 
-// ✅ Good: Fast scraping with concurrent mode
-const tweets = await fetchTweets("username", 5, false, undefined, true);
-
-// ❌ Avoid: Too many pages at once
-const tweets = await fetchTweets("username", 50); // Risk of blocking
+// ❌ Avoid: Excessive requests
+const result = await fetchTweets("username", 100);
 ```
 
-## 🔄 Migration from Original Version
+## 🔄 Migration Guide
 
-If you're migrating from the original `nitter-scraper` package:
+### From Original nitter-scraper
+
+This package is a feature-rich fork of the original [nitter-scraper](https://www.npmjs.com/package/nitter-scraper) by [@wslyvh](https://github.com/wslyvh). While maintaining backward compatibility, it adds significant enhancements:
 
 ```typescript
-// Old code
+// Original nitter-scraper API
 import { fetchTweets } from "nitter-scraper";
 const tweets = await fetchTweets("username", 3);
 
-// New code (compatible)
+// nitter-scraper-v2 API (backward compatible)
 import { fetchTweets } from "nitter-scraper-v2";
-const tweets = await fetchTweets("username", 3);
-
-// New features
-const tweets = await fetchTweets(
-  "username",
-  3,
-  true,
-  {
-    proxyList: ["proxy:port:user:pass"],
-  },
-  true
-); // Enable concurrent mode
+const result = await fetchTweets("username", 3);
+const tweets = result.tweets; // Access tweets (same structure)
+const profile = result.userProfile; // NEW: Access user profile
 ```
 
-### New Available Properties
+### Enhanced Features vs Original
 
-- `tweet.fullname` - **NEW!** User's full display name
-- `tweet.isVerified` - **NEW!** Verification status (boolean)
-- `tweet.verificationType` - **NEW!** Type of verification ("business", "blue", "verified")
-- `tweet.stats` - **NEW!** Tweet statistics (likes, retweets, comments, quotes, views)
-- `tweet.videos` - **NEW!** Detailed video information with poster and video URLs
-- `tweet.imageTweet[]` - Image URLs
-- `tweet.videoTweet[]` - Video URLs (legacy)
-- `tweet.avatarUrl` - User avatar
-- `tweet.cards[]` - Preview cards
-- `tweet.originalUrl` - Original tweet URL
+| Feature                 | Original | nitter-scraper-v2 |
+| ----------------------- | -------- | ----------------- |
+| Basic tweet extraction  | ✅       | ✅                |
+| User profile extraction | ❌       | ✅                |
+| Profile statistics      | ❌       | ✅                |
+| Banner images           | ❌       | ✅                |
+| Tweet statistics        | ❌       | ✅                |
+| Video information       | ❌       | ✅                |
+| Verification details    | ❌       | ✅                |
+| Proxy support           | ❌       | ✅                |
+| Concurrent mode         | ❌       | ✅                |
+
+### New Features Available
+
+- `result.userProfile` - Complete user profile with statistics and banner
+- `tweet.stats` - Detailed engagement metrics (likes, retweets, comments, views)
+- `tweet.videos` - Enhanced video information with thumbnails
+- `tweet.verificationType` - Detailed verification status ("business", "blue", "verified")
+- Advanced proxy management with automatic failover
+- High-performance concurrent processing mode
 
 </details>
 
@@ -617,20 +521,19 @@ const tweets = await fetchTweets(
 <details>
 <summary><b>📖 Cliquez pour développer la documentation française</b></summary>
 
-Un package TypeScript puissant pour scraper les tweets depuis Nitter sans authentification. Cette version améliorée ajoute le support des proxies, l'extraction de médias (images/vidéos), les cartes de prévisualisation, les informations de vérification des comptes, les statistiques des tweets, le mode concurrent et bien plus encore !
+Un package TypeScript complet pour extraire les tweets et profils utilisateur depuis Nitter sans authentification. Ce fork amélioré du package original [nitter-scraper](https://www.npmjs.com/package/nitter-scraper) offre une gestion sophistiquée des proxies, une extraction complète des médias, des statistiques de profil utilisateur, et un traitement concurrent haute performance.
 
-## ✨ Fonctionnalités
+## ✨ Fonctionnalités principales
 
-- 🚀 **Scraping sans authentification** - Pas besoin de clés API Twitter
-- 🔄 **Gestion automatique de la pagination** - Récupère plusieurs pages automatiquement
-- 🛡️ **Protection contre le rate limiting** - Délais intelligents entre les requêtes
-- 🌐 **Support proxy avancé** - Trois modes : sans proxy, liste personnalisée, ou URL de téléchargement
-- 📷 **Extraction de médias** - Images, vidéos avec infos détaillées et cartes de prévisualisation
-- 👤 **Informations utilisateur** - Avatar, nom complet, statut et type de vérification
-- 📊 **Statistiques des tweets** - Commentaires, retweets, citations, likes, vues
-- ⚡ **Mode concurrent** - Récupération séquentielle rapide sans délais
-- 🔧 **TypeScript natif** - Typages complets et intellisense
-- ⚡ **Performance optimisée** - Gestion d'erreurs et retry automatique
+- 🚀 **Scraping sans authentification** - Aucune clé API Twitter requise
+- 👤 **Profils utilisateur complets** - Extraction des informations, statistiques et bannières
+- 🔄 **Pagination intelligente** - Traitement automatique multi-pages avec gestion des curseurs
+- 🛡️ **Support proxy avancé** - Modes multiples avec basculement automatique
+- 📷 **Extraction média complète** - Images, vidéos et cartes de prévisualisation
+- 📊 **Statistiques détaillées** - Métriques d'engagement et statistiques de profil
+- ⚡ **Modes haute performance** - Traitement concurrent pour collecte rapide
+- 🔧 **Support TypeScript complet** - Définitions de types et IntelliSense
+- 🛠️ **Prêt pour l'entreprise** - Gestion d'erreurs, logique de retry et stabilité
 
 ## 📦 Installation
 
@@ -638,45 +541,55 @@ Un package TypeScript puissant pour scraper les tweets depuis Nitter sans authen
 # Installation comme librairie
 npm install nitter-scraper-v2
 
-# Ou installation globale pour utiliser en CLI
+# Ou installation globale pour usage CLI
 npm install -g nitter-scraper-v2
 ```
 
 ## 🚀 Utilisation rapide
 
-### En tant que librairie
+### Utilisation basique avec profil utilisateur
 
 ```typescript
 import { fetchTweets } from "nitter-scraper-v2";
 
 async function main() {
-  // Utilisation basique
-  const tweets = await fetchTweets("elonmusk", 3);
-  console.log(`Trouvé ${tweets.length} tweets`);
+  // Récupération des tweets et informations de profil
+  const result = await fetchTweets("elonmusk", 3);
 
-  tweets.forEach((tweet) => {
+  // Affichage des informations du profil utilisateur
+  if (result.userProfile) {
+    const profile = result.userProfile;
+    console.log(`=== PROFIL UTILISATEUR ===`);
+    console.log(`Nom: ${profile.fullname} (@${profile.username})`);
+    console.log(`Description: ${profile.description}`);
+    console.log(
+      `Vérifié: ${
+        profile.isVerified ? `Oui (${profile.verificationType})` : "Non"
+      }`
+    );
+    console.log(`Avatar: ${profile.avatarUrl}`);
+    console.log(`Bannière: ${profile.bannerUrl}`);
+    console.log(`Inscription: ${profile.joinDate}`);
+    console.log(`Localisation: ${profile.location}`);
+    console.log(`Site web: ${profile.website}`);
+
+    console.log(`\n=== STATISTIQUES DU PROFIL ===`);
+    console.log(`Tweets: ${profile.stats.tweets.toLocaleString()}`);
+    console.log(`Abonnements: ${profile.stats.following.toLocaleString()}`);
+    console.log(`Abonnés: ${profile.stats.followers.toLocaleString()}`);
+    console.log(`Likes: ${profile.stats.likes.toLocaleString()}`);
+  }
+
+  // Affichage des tweets
+  console.log(`\n=== TWEETS (${result.tweets.length}) ===`);
+  result.tweets.forEach((tweet) => {
     console.log(`${tweet.fullname} (@${tweet.username}): ${tweet.text}`);
-
-    // Informations de vérification
-    if (tweet.isVerified) {
-      console.log(`✅ Vérifié (${tweet.verificationType})`);
-    }
-
-    // Statistiques
     console.log(
       `📊 ${tweet.stats.likes} likes, ${tweet.stats.retweets} retweets`
     );
 
-    // Médias
-    if (tweet.imageTweet.length > 0) {
-      console.log(`📷 Images: ${tweet.imageTweet.length}`);
-    }
     if (tweet.videos.length > 0) {
       console.log(`🎥 Vidéos: ${tweet.videos.length}`);
-      tweet.videos.forEach((video) => {
-        console.log(`  - Vidéo: ${video.videoUrl}`);
-        console.log(`  - Miniature: ${video.posterUrl}`);
-      });
     }
   });
 }
@@ -684,38 +597,31 @@ async function main() {
 main().catch(console.error);
 ```
 
-### Mode concurrent pour un scraping plus rapide
+### Mode concurrent haute performance
 
 ```typescript
 import { fetchTweets } from "nitter-scraper-v2";
 
 async function scrapingRapide() {
-  // Activer le mode concurrent pour une récupération plus rapide (pas de délais entre les requêtes)
-  const tweets = await fetchTweets(
+  // Activation du mode concurrent pour un traitement plus rapide
+  const result = await fetchTweets(
     "username",
     5, // maxPages
     false, // useProxies
     undefined, // proxyOptions
-    true // useConcurrency - NOUVEAU !
+    true // useConcurrency
   );
 
-  console.log(`Récupéré ${tweets.length} tweets rapidement !`);
+  console.log(`Traité ${result.tweets.length} tweets efficacement`);
+  console.log(
+    `Utilisateur: ${result.userProfile?.fullname} avec ${result.userProfile?.stats.followers} abonnés`
+  );
 }
 ```
 
-### En tant qu'outil CLI
+## 📚 Référence API complète
 
-```bash
-# Lancer le scraper avec Bun
-bun run cli
-
-# Ou si installé globalement
-nitter-scraper-v2
-```
-
-## 📚 API Complète
-
-### fetchTweets
+### Fonction fetchTweets
 
 ```typescript
 function fetchTweets(
@@ -723,28 +629,26 @@ function fetchTweets(
   maxPages?: number,
   useProxies?: boolean,
   proxyOptions?: ProxyOptions,
-  useConcurrency?: boolean // NOUVEAU !
-): Promise<Tweet[]>;
+  useConcurrency?: boolean
+): Promise<FetchTweetsResponse>;
 ```
 
 #### Paramètres
 
-| Paramètre        | Type           | Défaut      | Description                                                   |
-| ---------------- | -------------- | ----------- | ------------------------------------------------------------- |
-| `username`       | `string`       | **requis**  | Nom d'utilisateur Twitter (sans @)                            |
-| `maxPages`       | `number`       | `3`         | Nombre maximum de pages à récupérer                           |
-| `useProxies`     | `boolean`      | `false`     | Activer l'utilisation des proxies                             |
-| `proxyOptions`   | `ProxyOptions` | `undefined` | Options de configuration des proxies                          |
-| `useConcurrency` | `boolean`      | `false`     | Activer le mode séquentiel rapide (sans délais) |
+| Paramètre        | Type           | Défaut      | Description                                  |
+| ---------------- | -------------- | ----------- | -------------------------------------------- |
+| `username`       | `string`       | **requis**  | Nom d'utilisateur Twitter (sans @)           |
+| `maxPages`       | `number`       | `3`         | Nombre maximum de pages à récupérer          |
+| `useProxies`     | `boolean`      | `false`     | Activer l'utilisation des proxies            |
+| `proxyOptions`   | `ProxyOptions` | `undefined` | Options de configuration des proxies         |
+| `useConcurrency` | `boolean`      | `false`     | Activer le mode séquentiel haute performance |
 
-## 🌐 Gestion des Proxies
+## 🌐 Gestion des proxies
 
-Cette version offre trois modes de gestion des proxies :
-
-### 1. Sans proxy (par défaut)
+### 1. Fonctionnement direct (par défaut)
 
 ```typescript
-const tweets = await fetchTweets("username", 3, false);
+const result = await fetchTweets("username", 3, false);
 ```
 
 ### 2. Liste de proxies personnalisée
@@ -754,484 +658,202 @@ import { fetchTweets, ProxyOptions } from "nitter-scraper-v2";
 
 const proxyOptions: ProxyOptions = {
   proxyList: [
-    "192.168.1.1:8080:user1:pass1",
-    "192.168.1.2:8080:user2:pass2",
-    "192.168.1.3:8080:user3:pass3",
+    "proxy1.example.com:8080:user1:pass1",
+    "proxy2.example.com:8080:user2:pass2",
+    "proxy3.example.com:8080:user3:pass3",
   ],
 };
 
-const tweets = await fetchTweets("username", 3, true, proxyOptions);
+const result = await fetchTweets("username", 3, true, proxyOptions);
 ```
 
-### 3. URL de téléchargement des proxies
+### 3. Configuration proxy distante
 
 ```typescript
 const proxyOptions: ProxyOptions = {
   proxyUrl: "https://votre-serveur.com/proxies.txt",
 };
 
-const tweets = await fetchTweets("username", 3, true, proxyOptions);
+const result = await fetchTweets("username", 3, true, proxyOptions);
 ```
 
-## 📝 Types TypeScript
+## 📝 Définitions TypeScript
 
-### Tweet (Mis à jour)
+### FetchTweetsResponse
 
 ```typescript
-interface Tweet {
-  id: string; // ID unique du tweet
-  text: string; // Contenu textuel du tweet
-  username: string; // Nom d'utilisateur de l'auteur
-  fullname: string; // NOUVEAU ! Nom complet de l'auteur
-  isVerified: boolean; // NOUVEAU ! Statut de vérification
-  verificationType: string | null; // NOUVEAU ! Type de vérification : "business", "blue", "verified"
-  created_at: string; // Date de création (chaîne ISO)
-  timestamp: number | null; // Timestamp Unix (millisecondes)
-  imageTweet: string[]; // URLs des images attachées
-  videoTweet: string[]; // URLs des vidéos attachées (legacy)
-  videos: VideoInfo[]; // NOUVEAU ! Informations détaillées des vidéos
-  stats: TweetStats; // NOUVEAU ! Statistiques du tweet
-  avatarUrl: string | null; // URL de l'avatar de l'utilisateur
-  cards: Card[]; // Cartes de prévisualisation
-  originalUrl: string; // URL originale du tweet sur Twitter/X
+interface FetchTweetsResponse {
+  userProfile: UserProfile | null; // Informations complètes du profil utilisateur
+  tweets: Tweet[]; // Tableau des tweets extraits
 }
 ```
 
-### TweetStats (NOUVEAU !)
+### UserProfile
 
 ```typescript
-interface TweetStats {
-  comments: number; // Nombre de commentaires
-  retweets: number; // Nombre de retweets
-  quotes: number; // Nombre de citations
-  likes: number; // Nombre de likes
-  views: number; // Nombre de vues
+interface UserProfile {
+  username: string; // Nom d'utilisateur (@username)
+  fullname: string; // Nom complet affiché
+  description: string; // Bio/description du profil
+  isVerified: boolean; // Statut de vérification
+  verificationType: string | null; // Type de vérification: "business", "blue", "verified"
+  avatarUrl: string | null; // URL de l'avatar du profil
+  bannerUrl: string | null; // URL de la bannière du profil
+  stats: UserStats; // Statistiques du profil
+  joinDate: string | null; // Date de création du compte
+  location: string | null; // Localisation de l'utilisateur
+  website: string | null; // URL du site web
 }
 ```
 
-### VideoInfo (NOUVEAU !)
+### UserStats
 
 ```typescript
-interface VideoInfo {
-  posterUrl: string | null; // URL de la miniature/poster de la vidéo
-  videoUrl: string | null; // URL du fichier vidéo
+interface UserStats {
+  tweets: number; // Nombre total de tweets
+  following: number; // Number of accounts following
+  followers: number; // Nombre d'abonnés
+  likes: number; // Total likes given
 }
 ```
 
-### ProxyOptions
+## 💡 Exemples d'utilisation avancés
 
-```typescript
-export type ProxyOptions = {
-  proxyList?: string[]; // Liste de proxies au format "host:port:username:password"
-  proxyUrl?: string; // URL pour télécharger la liste de proxies
-};
-```
-
-### Card
-
-```typescript
-interface Card {
-  type: "card"; // Type de la carte
-  url: string | null; // URL de destination
-  imageUrl: string | null; // URL de l'image de prévisualisation
-  title: string; // Titre de la carte
-  description: string; // Description de la carte
-  destination: string; // Domaine de destination
-}
-```
-
-## 🔧 Configuration avancée
-
-### Mode concurrent vs Mode séquentiel
-
-```typescript
-// Mode séquentiel (par défaut) - délais de 2 secondes entre les requêtes
-const tweetsSequentiel = await fetchTweets(
-  "username",
-  5,
-  false,
-  undefined,
-  false
-);
-
-// Mode concurrent - pas de délais, récupération plus rapide
-const tweetsConcurrent = await fetchTweets(
-  "username",
-  5,
-  false,
-  undefined,
-  true
-);
-```
-
-**Note** : Le mode concurrent ne récupère pas les pages en parallèle (à cause de la pagination basée sur les curseurs), mais supprime les délais entre les requêtes séquentielles pour une performance globale plus rapide.
-
-### Format des proxies
-
-Les proxies doivent être au format : `host:port:username:password`
-
-Exemple :
-
-```
-proxy1.example.com:8080:monuser:monpass
-192.168.1.100:3128:admin:secret123
-proxy-server.net:1080:client:password
-```
-
-### Gestion des erreurs
-
-```typescript
-try {
-  const tweets = await fetchTweets("username", 5, true, proxyOptions, true);
-
-  if (tweets.length === 0) {
-    console.log("Aucun tweet trouvé");
-  } else {
-    console.log(`${tweets.length} tweets récupérés avec succès`);
-  }
-} catch (error) {
-  console.error("Erreur lors du scraping:", error);
-}
-```
-
-### Filtrage et traitement
-
-```typescript
-const tweets = await fetchTweets("username", 3);
-
-// Filtrer les comptes vérifiés
-const tweetsVerifies = tweets.filter((tweet) => tweet.isVerified);
-
-// Filtrer par type de vérification
-const comptesBusiness = tweets.filter(
-  (tweet) => tweet.verificationType === "business"
-);
-const comptesBlue = tweets.filter((tweet) => tweet.verificationType === "blue");
-
-// Filtrer les tweets avec un fort engagement
-const tweetsPopulaires = tweets.filter((tweet) => tweet.stats.likes > 100);
-
-// Filtrer les tweets avec des vidéos
-const tweetsAvecVideos = tweets.filter((tweet) => tweet.videos.length > 0);
-
-// Extraire toutes les informations vidéo
-const toutesLesVideos = tweets.flatMap((tweet) => tweet.videos);
-console.log(`Trouvé ${toutesLesVideos.length} vidéos au total`);
-
-// Filtrer les tweets récents (dernières 24h)
-const tweetsRecents = tweets.filter((tweet) => {
-  if (!tweet.timestamp) return false;
-  const unJourAuparavant = Date.now() - 24 * 60 * 60 * 1000;
-  return tweet.timestamp > unJourAuparavant;
-});
-
-// Extraire tous les médias
-const toutesLesImages = tweets.flatMap((tweet) => tweet.imageTweet);
-const toutesLesVideos = tweets.flatMap((tweet) => tweet.videoTweet);
-```
-
-## 💡 Exemples d'utilisation
-
-### Analyse de compte
+### Analyse complète de compte
 
 ```typescript
 async function analyserCompte(username: string) {
-  const tweets = await fetchTweets(username, 5, false, undefined, true);
+  const result = await fetchTweets(username, 5, false, undefined, true);
 
-  if (tweets.length === 0) {
+  if (result.tweets.length === 0) {
     console.log("Aucun tweet trouvé");
     return;
   }
 
-  const premierTweet = tweets[0];
-  console.log(`Compte: ${premierTweet.fullname} (@${premierTweet.username})`);
-  console.log(
-    `Vérifié: ${
-      premierTweet.isVerified ? `Oui (${premierTweet.verificationType})` : "Non"
-    }`
-  );
+  // Analyse du profil
+  if (result.userProfile) {
+    const profile = result.userProfile;
+    console.log(`=== ANALYSE DU PROFIL ===`);
+    console.log(`Compte: ${profile.fullname} (@${profile.username})`);
+    console.log(`Description: ${profile.description}`);
+    console.log(
+      `Vérifié: ${
+        profile.isVerified ? `Oui (${profile.verificationType})` : "Non"
+      }`
+    );
+    console.log(`Inscription: ${profile.joinDate}`);
+    console.log(`Localisation: ${profile.location}`);
+    console.log(`Site web: ${profile.website}`);
 
-  // Calculer les statistiques d'engagement
+    console.log(`\n=== STATISTIQUES DU PROFIL ===`);
+    console.log(`Total tweets: ${profile.stats.tweets.toLocaleString()}`);
+    console.log(`Abonnements: ${profile.stats.following.toLocaleString()}`);
+    console.log(`Abonnés: ${profile.stats.followers.toLocaleString()}`);
+    console.log(`Likes donnés: ${profile.stats.likes.toLocaleString()}`);
+
+    // Calcul des métriques d'influence
+    const ratio = profile.stats.followers / profile.stats.following;
+    console.log(`Ratio d'influence: ${ratio.toFixed(2)}:1`);
+  }
+
+  // Analyse des tweets
+  const tweets = result.tweets;
+  console.log(`\n=== ANALYSE DES TWEETS (${tweets.length} tweets récents) ===`);
+
+  // Calcul des statistiques d'engagement
   const totalLikes = tweets.reduce((sum, tweet) => sum + tweet.stats.likes, 0);
   const totalRetweets = tweets.reduce(
     (sum, tweet) => sum + tweet.stats.retweets,
     0
   );
-  const moyenneLikes = Math.round(totalLikes / tweets.length);
-  const moyenneRetweets = Math.round(totalRetweets / tweets.length);
+  const totalComments = tweets.reduce(
+    (sum, tweet) => sum + tweet.stats.comments,
+    0
+  );
+  const avgLikes = Math.round(totalLikes / tweets.length);
+  const avgRetweets = Math.round(totalRetweets / tweets.length);
+  const avgComments = Math.round(totalComments / tweets.length);
 
+  console.log(`Engagement moyen par tweet:`);
+  console.log(`  - Likes: ${avgLikes}`);
+  console.log(`  - Retweets: ${avgRetweets}`);
+  console.log(`  - Commentaires: ${avgComments}`);
+
+  // Analyse de l'utilisation des médias
+  const tweetsWithImages = tweets.filter((t) => t.imageTweet.length > 0).length;
+  const tweetsWithVideos = tweets.filter((t) => t.videos.length > 0).length;
+  const tweetsWithCards = tweets.filter((t) => t.cards.length > 0).length;
+
+  console.log(`\nUtilisation des médias:`);
   console.log(
-    `Engagement moyen: ${moyenneLikes} likes, ${moyenneRetweets} retweets`
-  );
-
-  // Statistiques des médias
-  const tweetsAvecImages = tweets.filter((t) => t.imageTweet.length > 0).length;
-  const tweetsAvecVideos = tweets.filter((t) => t.videos.length > 0).length;
-
-  console.log(
-    `Usage des médias: ${tweetsAvecImages} tweets avec images, ${tweetsAvecVideos} avec vidéos`
-  );
-}
-```
-
-### Comparaison de performance
-
-```typescript
-async function comparerPerformance(username: string) {
-  console.log("Test du mode séquentiel...");
-  const debutSequentiel = Date.now();
-  const tweetsSequentiel = await fetchTweets(
-    username,
-    3,
-    false,
-    undefined,
-    false
-  );
-  const tempsSequentiel = Date.now() - debutSequentiel;
-
-  console.log("Test du mode concurrent...");
-  const debutConcurrent = Date.now();
-  const tweetsConcurrent = await fetchTweets(
-    username,
-    3,
-    false,
-    undefined,
-    true
-  );
-  const tempsConcurrent = Date.now() - debutConcurrent;
-
-  console.log(
-    `Séquentiel: ${tweetsSequentiel.length} tweets en ${tempsSequentiel}ms`
+    `  - Images: ${tweetsWithImages}/${tweets.length} tweets (${Math.round(
+      (tweetsWithImages / tweets.length) * 100
+    )}%)`
   );
   console.log(
-    `Concurrent: ${tweetsConcurrent.length} tweets en ${tempsConcurrent}ms`
+    `  - Vidéos: ${tweetsWithVideos}/${tweets.length} tweets (${Math.round(
+      (tweetsWithVideos / tweets.length) * 100
+    )}%)`
   );
   console.log(
-    `Amélioration de vitesse: ${Math.round(
-      (tempsSequentiel / tempsConcurrent) * 100
-    )}%`
+    `  - Cartes: ${tweetsWithCards}/${tweets.length} tweets (${Math.round(
+      (tweetsWithCards / tweets.length) * 100
+    )}%)`
   );
 }
-```
-
-### Extraction de vidéos
-
-```typescript
-async function extraireVideos(username: string) {
-  const tweets = await fetchTweets(username, 5, false, undefined, true);
-
-  const videosTrouvees = tweets.filter((tweet) => tweet.videos.length > 0);
-
-  console.log(`Trouvé ${videosTrouvees.length} tweets avec des vidéos`);
-
-  videosTrouvees.forEach((tweet, index) => {
-    console.log(`\nTweet ${index + 1}: ${tweet.text.substring(0, 50)}...`);
-    tweet.videos.forEach((video, videoIndex) => {
-      console.log(`  Vidéo ${videoIndex + 1}:`);
-      console.log(`    - URL vidéo: ${video.videoUrl}`);
-      console.log(`    - URL miniature: ${video.posterUrl}`);
-    });
-  });
-}
-```
-
-### Scraping avec retry automatique
-
-```typescript
-async function scrapeWithRetry(username: string, maxRetries = 3) {
-  for (let i = 0; i < maxRetries; i++) {
-    try {
-      const tweets = await fetchTweets(username, 3, true, undefined, true);
-      return tweets;
-    } catch (error) {
-      console.log(`Tentative ${i + 1} échouée:`, error);
-      if (i === maxRetries - 1) throw error;
-
-      // Attendre avant de réessayer
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-    }
-  }
-}
-```
-
-### Analyse de contenu
-
-```typescript
-async function analyserTweets(username: string) {
-  const tweets = await fetchTweets(username, 5, false, undefined, true);
-
-  const stats = {
-    total: tweets.length,
-    verifie: tweets[0]?.isVerified || false,
-    typeVerification: tweets[0]?.verificationType || null,
-    avecImages: tweets.filter((t) => t.imageTweet.length > 0).length,
-    avecVideos: tweets.filter((t) => t.videos.length > 0).length,
-    avecCartes: tweets.filter((t) => t.cards.length > 0).length,
-    longueurMoyenne:
-      tweets.reduce((sum, t) => sum + t.text.length, 0) / tweets.length,
-    totalLikes: tweets.reduce((sum, t) => sum + t.stats.likes, 0),
-    totalRetweets: tweets.reduce((sum, t) => sum + t.stats.retweets, 0),
-    engagementMoyen:
-      tweets.reduce((sum, t) => sum + t.stats.likes + t.stats.retweets, 0) /
-      tweets.length,
-  };
-
-  console.log("Statistiques des tweets:", stats);
-  return stats;
-}
-```
-
-### Export en JSON
-
-```typescript
-import * as fs from "fs";
-
-async function exporterTweets(username: string, filename: string) {
-  const tweets = await fetchTweets(username, 10, true, undefined, true);
-
-  const donneesExport = {
-    username,
-    scrapeA: new Date().toISOString(),
-    totalTweets: tweets.length,
-    accountInfo:
-      tweets.length > 0
-        ? {
-            nomComplet: tweets[0].fullname,
-            estVerifie: tweets[0].isVerified,
-            typeVerification: tweets[0].verificationType,
-            urlAvatar: tweets[0].avatarUrl,
-          }
-        : null,
-    tweets,
-  };
-
-  fs.writeFileSync(filename, JSON.stringify(donneesExport, null, 2));
-  console.log(`${tweets.length} tweets exportés vers ${filename}`);
-}
-
-// Utilisation
-exporterTweets("elonmusk", "elonmusk_tweets.json");
 ```
 
 ## ⚡ Performance et optimisation
 
-### Recommandations
+### Modes de performance
 
-- **Mode concurrent** : Utilisez `useConcurrency: true` pour un scraping plus rapide quand vous avez besoin de plusieurs pages
-- **Pages multiples** : Limitez le nombre de pages pour éviter les timeouts
-- **Proxies** : Utilisez des proxies de qualité pour éviter les blocages
-- **Délais** : Le délai par défaut entre les requêtes est de 2 secondes (supprimé en mode concurrent)
-- **Retry** : Le système retry automatiquement jusqu'à 3 fois par requête
+| Mode       | Cas d'usage       | Vitesse | Niveau de risque |
+| ---------- | ----------------- | ------- | ---------------- |
+| Séquentiel | Production stable | Normal  | Faible           |
+| Concurrent | Collecte rapide   | Élevée  | Moyen            |
 
-### Comparaison de performance
+### Bonnes pratiques
 
-| Mode       | 3 Pages | 5 Pages | 10 Pages |
-| ---------- | ------- | ------- | -------- |
-| Séquentiel | ~8s     | ~12s    | ~22s     |
-| Concurrent | ~3s     | ~5s     | ~8s      |
-
-### Limites
-
-- **Rate limiting** : Nitter peut limiter les requêtes trop fréquentes
-- **Disponibilité** : Les instances Nitter peuvent être temporairement indisponibles
-- **Proxies** : Les proxies défaillants sont automatiquement retirés de la liste
-- **Pagination** : La vraie concurrence n'est pas possible à cause de la pagination basée sur les curseurs
-
-## 🛡️ Sécurité et bonnes pratiques
-
-### Gestion des proxies
-
-```typescript
-// ✅ Bon : Proxies avec authentification
-const proxyOptionsSecurisees: ProxyOptions = {
-  proxyList: ["premium-proxy.com:8080:monuser:motdepassefort"],
-};
-
-// ❌ Éviter : Proxies publics sans authentification
-const proxyOptionsNonSecurisees: ProxyOptions = {
-  proxyList: [
-    "free-proxy.com:8080::", // Pas d'authentification
-  ],
-};
-```
-
-### Respect des limites
-
-```typescript
-// ✅ Bon : Limitation raisonnable
-const tweets = await fetchTweets("username", 3); // Max 3 pages
-
-// ✅ Bon : Scraping rapide avec le mode concurrent
-const tweets = await fetchTweets("username", 5, false, undefined, true);
-
-// ❌ Éviter : Trop de pages d'un coup
-const tweets = await fetchTweets("username", 50); // Risque de blocage
-```
-
-## 🔄 Migration depuis la version originale
-
-Si vous migrez depuis le package `nitter-scraper` original :
-
-```typescript
-// Ancien code
-import { fetchTweets } from "nitter-scraper";
-const tweets = await fetchTweets("username", 3);
-
-// Nouveau code (compatible)
-import { fetchTweets } from "nitter-scraper-v2";
-const tweets = await fetchTweets("username", 3);
-
-// Nouvelles fonctionnalités
-const tweets = await fetchTweets(
-  "username",
-  3,
-  true,
-  {
-    proxyList: ["proxy:port:user:pass"],
-  },
-  true
-); // Activer le mode concurrent
-```
-
-### Nouvelles propriétés disponibles
-
-- `tweet.fullname` - **NOUVEAU !** Nom complet d'affichage de l'utilisateur
-- `tweet.isVerified` - **NOUVEAU !** Statut de vérification (booléen)
-- `tweet.verificationType` - **NOUVEAU !** Type de vérification ("business", "blue", "verified")
-- `tweet.stats` - **NOUVEAU !** Statistiques du tweet (likes, retweets, commentaires, citations, vues)
-- `tweet.videos` - **NOUVEAU !** Informations détaillées des vidéos avec URLs de miniature et vidéo
-- `tweet.imageTweet[]` - URLs des images
-- `tweet.videoTweet[]` - URLs des vidéos (legacy)
-- `tweet.avatarUrl` - Avatar de l'utilisateur
-- `tweet.cards[]` - Cartes de prévisualisation
-- `tweet.originalUrl` - URL originale du tweet
+- **Mode concurrent**: Utiliser pour la collecte rapide (1-10 pages)
+- **Rotation de proxies**: Essentiel pour les opérations à grande échelle
+- **Limitation de débit**: Respecter les limites des instances Nitter
+- **Gestion d'erreurs**: Implémenter une logique de retry pour la production
 
 </details>
 
 ---
 
-## 📄 License / Licence
+## 📄 License
 
-MIT
+MIT License - see [LICENSE](LICENSE) file for details.
 
-## 🤝 Contributing / Contribution
+## 🤝 Contributing
 
-Contributions are welcome! Feel free to:
-Les contributions sont les bienvenues ! N'hésitez pas à :
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-1. Fork the project / Fork le projet
-2. Create a branch for your feature / Créer une branche pour votre fonctionnalité
-3. Commit your changes / Commit vos changements
-4. Push to the branch / Push vers la branche
-5. Open a Pull Request / Ouvrir une Pull Request
+1. Fork the project
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ## 🐛 Support
 
-For bugs and feature requests, please open an issue on GitHub.
-Pour les bugs et demandes de fonctionnalités, veuillez ouvrir une issue sur GitHub.
+For bugs and feature requests, please open an issue on [GitHub](https://github.com/FaresSofiane/nitter-scraper-v2/issues).
+
+## 👨‍💻 Author
+
+**Fares Sofiane**
+
+- GitHub: [@FaresSofiane](https://github.com/FaresSofiane)
+- Repository: [nitter-scraper-v2](https://github.com/FaresSofiane/nitter-scraper-v2)
 
 ---
 
-**Note**: This package is an enhanced fork of the original `nitter-scraper` project. All new features have been developed while maintaining compatibility with the original API.
+<div align="center">
 
-**Note**: Ce package est un fork amélioré du projet original `nitter-scraper`. Toutes les nouvelles fonctionnalités ont été développées en gardant la compatibilité avec l'API originale.
+**Built with ❤️ by [Fares Sofiane](https://github.com/FaresSofiane)**
+
+[⭐ Star this repository](https://github.com/FaresSofiane/nitter-scraper-v2) if you find it useful!
+
+</div>

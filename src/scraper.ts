@@ -1,7 +1,7 @@
 import * as cheerio from "cheerio";
 import axios from "axios";
 import { getDateFromTimestamp } from "./utils/dateUtils";
-import { Tweet, TweetStats, VideoInfo } from "./types/Tweet";
+import { Tweet, TweetStats, VideoInfo, UserProfile, UserStats, FetchTweetsResponse } from "./types/Tweet";
 import * as fs from "fs";
 import { execSync } from "child_process";
 import { HttpsProxyAgent } from "https-proxy-agent";
@@ -518,62 +518,66 @@ async function fetchSinglePage(
   cursor: string | null,
   useProxies: boolean,
   seenTweets: Set<string>
-): Promise<{ tweets: Tweet[]; nextCursor: string | null }> {
+): Promise<{ tweets: Tweet[]; nextCursor: string | null; html: string }> {
   const url = cursor 
     ? `${BASE_URL}/${username}?cursor=${encodeURIComponent(cursor)}`
     : `${BASE_URL}/${username}`;
 
-  // Essayer plusieurs proxies en cas d'échec
-  let response: any;
-  let attempts = 0;
-  const maxAttempts = 3;
-  let currentProxy: any = null;
+      // Essayer plusieurs proxies en cas d'échec
+      let response: any;
+      let attempts = 0;
+      const maxAttempts = 3;
+      let currentProxy: any = null;
 
-  while (attempts < maxAttempts) {
-    try {
-      currentProxy = getRandomProxy(useProxies);
+      while (attempts < maxAttempts) {
+        try {
+          currentProxy = getRandomProxy(useProxies);
 
-      // Fetch the HTML content using axios with proxy
-      response = await axios.get(url, {
-        headers: {
-          Accept:
-            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-          "Accept-Language": "fr-FR,fr;q=0.9",
-          Priority: "u=0, i",
-          "User-Agent":
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/19.0 Safari/605.1.15",
-        },
-        timeout: 10000, // 10 seconds timeout
-        httpsAgent: currentProxy
-          ? createProxyAgent(currentProxy)
-          : undefined,
-        httpAgent: currentProxy
-          ? createProxyAgent(currentProxy)
-          : undefined,
-      });
+          // Fetch the HTML content using axios with proxy
+          response = await axios.get(url, {
+            headers: {
+              Accept:
+                "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+              "Accept-Language": "fr-FR,fr;q=0.9",
+              Priority: "u=0, i",
+              "User-Agent":
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/19.0 Safari/605.1.15",
+            },
+            timeout: 10000, // 10 seconds timeout
+            httpsAgent: currentProxy
+              ? createProxyAgent(currentProxy)
+              : undefined,
+            httpAgent: currentProxy
+              ? createProxyAgent(currentProxy)
+              : undefined,
+          });
 
-      // Succès - sortir de la boucle
-      break;
-    } catch (error) {
-      attempts++;
+          // Succès - sortir de la boucle
+          break;
+        } catch (error) {
+          attempts++;
       console.error(`Échec de la tentative ${attempts} pour ${url}: ${error}`);
 
-      // Si on utilise un proxy et qu'il y a une erreur, on le retire de la liste
-      if (currentProxy && useProxies) {
-        removeProxy(currentProxy);
+          // Si on utilise un proxy et qu'il y a une erreur, on le retire de la liste
+          if (currentProxy && useProxies) {
+            removeProxy(currentProxy);
+          }
+
+          if (attempts >= maxAttempts) {
+            throw error;
+          }
+
+          // Attendre un peu avant de réessayer avec un autre proxy
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
       }
 
-      if (attempts >= maxAttempts) {
-        throw error;
-      }
-
-      // Attendre un peu avant de réessayer avec un autre proxy
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-    }
-  }
-
-  const html = response.data;
-  return extractTweetsFromHtml(html, username, seenTweets);
+      const html = response.data;
+  const result = extractTweetsFromHtml(html, username, seenTweets);
+  return {
+    ...result,
+    html
+  };
 }
 
 /**
@@ -585,13 +589,14 @@ export async function fetchTweets(
   useProxies: boolean = false,
   proxyOptions?: ProxyOptions,
   useConcurrency: boolean = false
-): Promise<Tweet[]> {
+): Promise<FetchTweetsResponse> {
   try {
     // Charger les proxies au début
     await loadProxies(useProxies, proxyOptions);
 
     const allTweets: Tweet[] = [];
     const seenTweets = new Set<string>();
+    let userProfile: UserProfile | null = null;
 
     if (useConcurrency && maxPages > 1) {
       // Mode concurrent optimisé : récupération séquentielle rapide sans délais
@@ -604,6 +609,11 @@ export async function fetchTweets(
       while (pagesProcessed < maxPages) {
         try {
           const result = await fetchSinglePage(username, nextCursor, useProxies, seenTweets);
+
+          // Extraire le profil utilisateur depuis la première page
+          if (pagesProcessed === 0 && result.html) {
+            userProfile = extractUserProfile(result.html, username);
+          }
 
           // Ajouter les tweets
           for (const tweet of result.tweets) {
@@ -638,6 +648,11 @@ export async function fetchTweets(
       do {
         const result = await fetchSinglePage(username, nextCursor, useProxies, seenTweets);
 
+        // Extraire le profil utilisateur depuis la première page
+        if (pagesProcessed === 0 && result.html) {
+          userProfile = extractUserProfile(result.html, username);
+        }
+
         // Add tweets to the result and update seen tweets
         for (const tweet of result.tweets) {
           allTweets.push(tweet);
@@ -659,11 +674,140 @@ export async function fetchTweets(
       } while (nextCursor && pagesProcessed < maxPages);
     }
 
-    return allTweets;
+    return {
+      userProfile,
+      tweets: allTweets
+    };
   } catch (error) {
     console.error(`Error fetching tweets: ${error}`);
-    return [];
+    return {
+      userProfile: null,
+      tweets: []
+    };
   } finally {
     // Pas de nettoyage de fichier nécessaire car on utilise axios directement
+  }
+}
+
+/**
+ * Extract user profile information from HTML content
+ */
+function extractUserProfile(html: string, username: string): UserProfile | null {
+  const $ = cheerio.load(html);
+  
+  try {
+    // Extraire le nom complet
+    const fullnameElement = $(".profile-card .profile-card-fullname");
+    const fullname = fullnameElement.text().trim() || username;
+    
+    // Extraire la description/bio
+    const descriptionElement = $(".profile-card .profile-bio");
+    const description = descriptionElement.text().trim() || "";
+    
+    // Vérifier le statut de vérification
+    const verifiedElement = $(".profile-card .verified-icon");
+    let isVerified = false;
+    let verificationType: string | null = null;
+    
+    if (verifiedElement.length > 0) {
+      isVerified = true;
+      const classes = verifiedElement.attr("class") || "";
+      if (classes.includes("business")) {
+        verificationType = "business";
+      } else if (classes.includes("blue")) {
+        verificationType = "blue";
+      } else {
+        verificationType = "verified";
+      }
+    }
+    
+    // Extraire l'URL de l'avatar
+    const avatarElement = $(".profile-card .profile-card-avatar img");
+    let avatarUrl: string | null = null;
+    if (avatarElement.length > 0) {
+      avatarUrl = avatarElement.attr("src") || null;
+      if (avatarUrl && !avatarUrl.startsWith("http")) {
+        avatarUrl = `${BASE_URL}${avatarUrl}`;
+      }
+    }
+    
+    // Extraire l'URL de la bannière
+    const bannerElement = $(".profile-banner img");
+    let bannerUrl: string | null = null;
+    if (bannerElement.length > 0) {
+      bannerUrl = bannerElement.attr("src") || null;
+      if (bannerUrl && !bannerUrl.startsWith("http")) {
+        bannerUrl = `${BASE_URL}${bannerUrl}`;
+      }
+    }
+    
+    // Extraire les statistiques du profil
+    const stats: UserStats = {
+      tweets: 0,
+      following: 0,
+      followers: 0,
+      likes: 0
+    };
+    
+    // Parser les statistiques depuis .profile-statlist li
+    $(".profile-statlist li").each((_, statElement) => {
+      const $stat = $(statElement);
+      const headerText = $stat.find(".profile-stat-header").text().trim().toLowerCase();
+      const numText = $stat.find(".profile-stat-num").text().trim();
+      
+      // Convertir le nombre (gérer les virgules et les formats comme "2,303,191")
+      const number = parseInt(numText.replace(/,/g, ''), 10) || 0;
+      
+      if (headerText.includes("tweet")) {
+        stats.tweets = number;
+      } else if (headerText.includes("following")) {
+        stats.following = number;
+      } else if (headerText.includes("follower")) {
+        stats.followers = number;
+      } else if (headerText.includes("like")) {
+        stats.likes = number;
+      }
+    });
+    
+    // Extraire la date d'inscription
+    const joinDateElement = $(".profile-joindate");
+    let joinDate: string | null = null;
+    if (joinDateElement.length > 0) {
+      const joinText = joinDateElement.text().trim();
+      // Extraire la date du format "Joined Month Year"
+      const dateMatch = joinText.match(/joined\s+(.+)/i);
+      if (dateMatch) {
+        joinDate = dateMatch[1].trim();
+      }
+    }
+    
+    // Extraire la localisation
+    const locationElement = $(".profile-location");
+    const location = locationElement.text().trim() || null;
+    
+    // Extraire le site web
+    const websiteElement = $(".profile-website a");
+    let website: string | null = null;
+    if (websiteElement.length > 0) {
+      website = websiteElement.attr("href") || websiteElement.text().trim() || null;
+    }
+    
+    return {
+      username,
+      fullname,
+      description,
+      isVerified,
+      verificationType,
+      avatarUrl,
+      bannerUrl,
+      stats,
+      joinDate,
+      location,
+      website
+    };
+    
+  } catch (error) {
+    console.error(`Error extracting user profile: ${error}`);
+    return null;
   }
 }

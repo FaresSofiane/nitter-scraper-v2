@@ -1,4 +1,4 @@
-import { Tweet } from "./types/Tweet";
+import { FetchTweetsResponse } from "./types/Tweet";
 export interface Card {
     type: "card";
     url: string | null;
@@ -14,4 +14,4 @@ export type ProxyOptions = {
 /**
  * Fetch tweets for a given username
  */
-export declare function fetchTweets(username: string, maxPages?: number, useProxies?: boolean, proxyOptions?: ProxyOptions, useConcurrency?: boolean): Promise<Tweet[]>;
+export declare function fetchTweets(username: string, maxPages?: number, useProxies?: boolean, proxyOptions?: ProxyOptions, useConcurrency?: boolean): Promise<FetchTweetsResponse>;
