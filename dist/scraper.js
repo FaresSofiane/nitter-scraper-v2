@@ -259,6 +259,27 @@ function extractTweetsFromHtml(html, username, existingTweets) {
             const dateStr = timestampElement.attr("title");
             // Parse the date from the timestamp
             const date = (0, dateUtils_1.getDateFromTimestamp)(timestamp, dateStr);
+            // Extraire le nom complet du compte
+            const fullnameElement = tweetElement.find(".fullname");
+            const fullname = fullnameElement.text().trim() || username;
+            // Vérifier le statut de vérification et le type
+            const verifiedElement = tweetElement.find(".verified-icon");
+            let isVerified = false;
+            let verificationType = null;
+            if (verifiedElement.length > 0) {
+                isVerified = true;
+                // Extraire le type de vérification des classes CSS
+                const classes = verifiedElement.attr("class") || "";
+                if (classes.includes("business")) {
+                    verificationType = "business";
+                }
+                else if (classes.includes("blue")) {
+                    verificationType = "blue";
+                }
+                else {
+                    verificationType = "verified"; // Type générique si pas spécifique
+                }
+            }
             // Récupérer l'URL de l'avatar
             const avatarElement = tweetElement.find(".avatar.round");
             let avatarUrl = null;
@@ -308,6 +329,9 @@ function extractTweetsFromHtml(html, username, existingTweets) {
                 id: cleanId,
                 text,
                 username,
+                fullname,
+                isVerified,
+                verificationType,
                 created_at: date ? date.toISOString() : "",
                 timestamp: date ? date.getTime() : null,
                 imageTweet,
@@ -324,74 +348,118 @@ function extractTweetsFromHtml(html, username, existingTweets) {
     return { tweets, nextCursor };
 }
 /**
+ * Fetch a single page of tweets
+ */
+async function fetchSinglePage(username, cursor, useProxies, seenTweets) {
+    const url = cursor
+        ? `${BASE_URL}/${username}?cursor=${encodeURIComponent(cursor)}`
+        : `${BASE_URL}/${username}`;
+    // Essayer plusieurs proxies en cas d'échec
+    let response;
+    let attempts = 0;
+    const maxAttempts = 3;
+    let currentProxy = null;
+    while (attempts < maxAttempts) {
+        try {
+            currentProxy = getRandomProxy(useProxies);
+            // Fetch the HTML content using axios with proxy
+            response = await axios_1.default.get(url, {
+                headers: {
+                    Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                    "Accept-Language": "fr-FR,fr;q=0.9",
+                    Priority: "u=0, i",
+                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/19.0 Safari/605.1.15",
+                },
+                timeout: 10000, // 10 seconds timeout
+                httpsAgent: currentProxy
+                    ? createProxyAgent(currentProxy)
+                    : undefined,
+                httpAgent: currentProxy
+                    ? createProxyAgent(currentProxy)
+                    : undefined,
+            });
+            // Succès - sortir de la boucle
+            break;
+        }
+        catch (error) {
+            attempts++;
+            console.error(`Échec de la tentative ${attempts} pour ${url}: ${error}`);
+            // Si on utilise un proxy et qu'il y a une erreur, on le retire de la liste
+            if (currentProxy && useProxies) {
+                removeProxy(currentProxy);
+            }
+            if (attempts >= maxAttempts) {
+                throw error;
+            }
+            // Attendre un peu avant de réessayer avec un autre proxy
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+    }
+    const html = response.data;
+    return extractTweetsFromHtml(html, username, seenTweets);
+}
+/**
  * Fetch tweets for a given username
  */
-async function fetchTweets(username, maxPages = 3, useProxies = false, proxyOptions) {
+async function fetchTweets(username, maxPages = 3, useProxies = false, proxyOptions, useConcurrency = false) {
     try {
         // Charger les proxies au début
         await loadProxies(useProxies, proxyOptions);
         const allTweets = [];
         const seenTweets = new Set();
-        let nextCursor = null;
-        let pagesProcessed = 0;
-        do {
-            // Construct URL - pas de cursor dans Nitter, il charge automatiquement plus de tweets
-            const url = `${BASE_URL}/${username}`;
-            // Essayer plusieurs proxies en cas d'échec
-            let response;
-            let attempts = 0;
-            const maxAttempts = 3;
-            let currentProxy = null;
-            while (attempts < maxAttempts) {
+        if (useConcurrency && maxPages > 1) {
+            // Mode concurrent optimisé : récupération séquentielle rapide sans délais
+            console.log(`🚀 Mode concurrent activé - récupération rapide sans délais de ${maxPages} pages`);
+            let nextCursor = null;
+            let pagesProcessed = 0;
+            // Récupérer les pages une par une mais sans délai entre les requêtes
+            while (pagesProcessed < maxPages) {
                 try {
-                    currentProxy = getRandomProxy(useProxies);
-                    // Fetch the HTML content using axios with proxy
-                    response = await axios_1.default.get(url, {
-                        headers: {
-                            Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                            "Accept-Language": "fr-FR,fr;q=0.9",
-                            Priority: "u=0, i",
-                            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/19.0 Safari/605.1.15",
-                        },
-                        timeout: 10000, // 10 seconds timeout
-                        httpsAgent: currentProxy
-                            ? createProxyAgent(currentProxy)
-                            : undefined,
-                        httpAgent: currentProxy
-                            ? createProxyAgent(currentProxy)
-                            : undefined,
-                    });
-                    // Succès - sortir de la boucle
-                    break;
+                    const result = await fetchSinglePage(username, nextCursor, useProxies, seenTweets);
+                    // Ajouter les tweets
+                    for (const tweet of result.tweets) {
+                        if (!seenTweets.has(tweet.id)) {
+                            allTweets.push(tweet);
+                            seenTweets.add(tweet.id);
+                        }
+                    }
+                    nextCursor = result.nextCursor;
+                    pagesProcessed++;
+                    console.log(`📄 Page ${pagesProcessed}/${maxPages} récupérée (${result.tweets.length} tweets)`);
+                    // Pas de délai en mode concurrent - on enchaîne directement
+                    if (!nextCursor) {
+                        console.log(`⚠️  Plus de pages disponibles après ${pagesProcessed} pages`);
+                        break;
+                    }
                 }
                 catch (error) {
-                    attempts++;
-                    console.error(`Échec de la tentative ${attempts}: ${error}`);
-                    // Si on utilise un proxy et qu'il y a une erreur, on le retire de la liste
-                    if (currentProxy && useProxies) {
-                        removeProxy(currentProxy);
-                    }
-                    if (attempts >= maxAttempts) {
-                        throw error;
-                    }
-                    // Attendre un peu avant de réessayer avec un autre proxy
-                    await new Promise((resolve) => setTimeout(resolve, 1000));
+                    console.error(`Erreur lors de la récupération de la page ${pagesProcessed + 1}:`, error);
+                    break;
                 }
             }
-            const html = response.data;
-            const { tweets, nextCursor: cursor } = extractTweetsFromHtml(html, username, seenTweets);
-            // Add tweets to the result and update seen tweets
-            for (const tweet of tweets) {
-                allTweets.push(tweet);
-                seenTweets.add(tweet.id);
-            }
-            nextCursor = cursor;
-            pagesProcessed++;
-            // Add delay between requests to avoid rate limiting
-            if (nextCursor && pagesProcessed < maxPages) {
-                await new Promise((resolve) => setTimeout(resolve, DELAY_BETWEEN_REQUESTS));
-            }
-        } while (nextCursor && pagesProcessed < maxPages);
+        }
+        else {
+            // Mode séquentiel : traitement page par page avec délais (comportement original)
+            console.log(`📄 Mode séquentiel - récupération de ${maxPages} pages avec délais de ${DELAY_BETWEEN_REQUESTS}ms`);
+            let nextCursor = null;
+            let pagesProcessed = 0;
+            do {
+                const result = await fetchSinglePage(username, nextCursor, useProxies, seenTweets);
+                // Add tweets to the result and update seen tweets
+                for (const tweet of result.tweets) {
+                    allTweets.push(tweet);
+                    seenTweets.add(tweet.id);
+                }
+                nextCursor = result.nextCursor;
+                pagesProcessed++;
+                console.log(`📄 Page ${pagesProcessed}/${maxPages} récupérée (${result.tweets.length} tweets)`);
+                // Add delay between requests to avoid rate limiting
+                if (nextCursor && pagesProcessed < maxPages) {
+                    console.log(`⏳ Attente de ${DELAY_BETWEEN_REQUESTS}ms avant la page suivante...`);
+                    await new Promise((resolve) => setTimeout(resolve, DELAY_BETWEEN_REQUESTS));
+                }
+            } while (nextCursor && pagesProcessed < maxPages);
+        }
         return allTweets;
     }
     catch (error) {

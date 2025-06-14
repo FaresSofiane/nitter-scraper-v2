@@ -2,6 +2,9 @@ export interface Tweet {
   id: string;
   text: string;
   username: string;
+  fullname: string; // Nom complet du compte
+  isVerified: boolean; // Statut de vérification
+  verificationType: string | null; // Type de vérification (business, blue, etc.)
   created_at: string;
   timestamp: number | null;
   imageTweet: string[];

@@ -14,4 +14,4 @@ export type ProxyOptions = {
 /**
  * Fetch tweets for a given username
  */
-export declare function fetchTweets(username: string, maxPages?: number, useProxies?: boolean, proxyOptions?: ProxyOptions): Promise<Tweet[]>;
+export declare function fetchTweets(username: string, maxPages?: number, useProxies?: boolean, proxyOptions?: ProxyOptions, useConcurrency?: boolean): Promise<Tweet[]>;

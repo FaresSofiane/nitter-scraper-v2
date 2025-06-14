@@ -8,13 +8,7 @@ async function main() {
 
   const tweets = await fetchTweets("psg_inside", 3);
 
-  console.log("tweets");
 
-  for (const tweet of tweets) {
-    console.log("------");
-    console.log("Tweet:", tweet.text);
-    console.log("Tweet:", tweet.cards);
-  }
 }
 
 main().catch(console.error);
