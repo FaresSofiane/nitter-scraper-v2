@@ -254,7 +254,8 @@ function extractCardInfo(cardElement: any, $: cheerio.CheerioAPI): Card | null {
 function extractTweetsFromHtml(
   html: string,
   username: string,
-  existingTweets: Set<string>
+  existingTweets: Set<string>,
+  includeRetweets: boolean = false
 ): { tweets: Tweet[]; nextCursor: string | null } {
   const $ = cheerio.load(html);
   const tweets: Tweet[] = [];
@@ -280,6 +281,25 @@ function extractTweetsFromHtml(
       // Skip pinned tweets
       if (tweetElement.find(".pinned").length > 0) {
         return;
+      }
+
+      // Détecter si c'est un retweet
+      const retweetHeader = tweetElement.find(".retweet-header");
+      const isRetweet = retweetHeader.length > 0;
+      let retweetedBy: string | null = null;
+
+      if (isRetweet) {
+        // Extraire le nom de l'utilisateur qui a retweeté
+        const retweetText = retweetHeader.text().trim();
+        const retweetMatch = retweetText.match(/(.+?)\s+retweeted/);
+        if (retweetMatch) {
+          retweetedBy = retweetMatch[1].trim();
+        }
+
+        // Si includeRetweets est false, ignorer ce tweet
+        if (!includeRetweets) {
+          return;
+        }
       }
       // Extract tweet ID from the permalink
       const permalink = tweetElement.find(".tweet-link").attr("href");
@@ -497,6 +517,8 @@ function extractTweetsFromHtml(
         stats,
         avatarUrl,
         cards,
+        isRetweet,
+        retweetedBy,
         originalUrl: TWITTER_URL.replace("{username}", username).replace(
           "{id}",
           cleanId
@@ -517,7 +539,8 @@ async function fetchSinglePage(
   username: string,
   cursor: string | null,
   useProxies: boolean,
-  seenTweets: Set<string>
+  seenTweets: Set<string>,
+  includeRetweets: boolean = false
 ): Promise<{ tweets: Tweet[]; nextCursor: string | null; html: string }> {
   const url = cursor 
     ? `${BASE_URL}/${username}?cursor=${encodeURIComponent(cursor)}`
@@ -573,7 +596,7 @@ async function fetchSinglePage(
       }
 
       const html = response.data;
-  const result = extractTweetsFromHtml(html, username, seenTweets);
+  const result = extractTweetsFromHtml(html, username, seenTweets, includeRetweets);
   return {
     ...result,
     html
@@ -588,7 +611,8 @@ export async function fetchTweets(
   maxPages: number = 3,
   useProxies: boolean = false,
   proxyOptions?: ProxyOptions,
-  useConcurrency: boolean = false
+  useConcurrency: boolean = false,
+  includeRetweets: boolean = false
 ): Promise<FetchTweetsResponse> {
   try {
     // Charger les proxies au début
@@ -607,7 +631,7 @@ export async function fetchTweets(
       // Récupérer les pages une par une mais sans délai entre les requêtes
       while (pagesProcessed < maxPages) {
         try {
-          const result = await fetchSinglePage(username, nextCursor, useProxies, seenTweets);
+          const result = await fetchSinglePage(username, nextCursor, useProxies, seenTweets, includeRetweets);
 
           // Extraire le profil utilisateur depuis la première page
           if (pagesProcessed === 0 && result.html) {
@@ -642,7 +666,7 @@ export async function fetchTweets(
       let pagesProcessed = 0;
 
       do {
-        const result = await fetchSinglePage(username, nextCursor, useProxies, seenTweets);
+        const result = await fetchSinglePage(username, nextCursor, useProxies, seenTweets, includeRetweets);
 
         // Extraire le profil utilisateur depuis la première page
         if (pagesProcessed === 0 && result.html) {

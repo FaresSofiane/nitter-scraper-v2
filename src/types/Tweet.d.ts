@@ -56,4 +56,6 @@ export interface Tweet {
   stats: TweetStats; // Statistiques du tweet
   originalUrl: string;
   cards: any[]; // Nouveau champ pour stocker les informations des cartes
+  isRetweet: boolean; // Indique si c'est un retweet
+  retweetedBy: string | null; // Nom de l'utilisateur qui a retweeté (si c'est un retweet)
 }

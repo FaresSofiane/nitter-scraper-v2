@@ -217,7 +217,7 @@ function extractCardInfo(cardElement, $) {
 /**
  * Extract tweets and next cursor from HTML content
  */
-function extractTweetsFromHtml(html, username, existingTweets) {
+function extractTweetsFromHtml(html, username, existingTweets, includeRetweets = false) {
     const $ = cheerio.load(html);
     const tweets = [];
     let nextCursor = null;
@@ -239,6 +239,22 @@ function extractTweetsFromHtml(html, username, existingTweets) {
             // Skip pinned tweets
             if (tweetElement.find(".pinned").length > 0) {
                 return;
+            }
+            // Détecter si c'est un retweet
+            const retweetHeader = tweetElement.find(".retweet-header");
+            const isRetweet = retweetHeader.length > 0;
+            let retweetedBy = null;
+            if (isRetweet) {
+                // Extraire le nom de l'utilisateur qui a retweeté
+                const retweetText = retweetHeader.text().trim();
+                const retweetMatch = retweetText.match(/(.+?)\s+retweeted/);
+                if (retweetMatch) {
+                    retweetedBy = retweetMatch[1].trim();
+                }
+                // Si includeRetweets est false, ignorer ce tweet
+                if (!includeRetweets) {
+                    return;
+                }
             }
             // Extract tweet ID from the permalink
             const permalink = tweetElement.find(".tweet-link").attr("href");
@@ -434,6 +450,8 @@ function extractTweetsFromHtml(html, username, existingTweets) {
                 stats,
                 avatarUrl,
                 cards,
+                isRetweet,
+                retweetedBy,
                 originalUrl: TWITTER_URL.replace("{username}", username).replace("{id}", cleanId),
             });
         }
@@ -446,7 +464,7 @@ function extractTweetsFromHtml(html, username, existingTweets) {
 /**
  * Fetch a single page of tweets
  */
-async function fetchSinglePage(username, cursor, useProxies, seenTweets) {
+async function fetchSinglePage(username, cursor, useProxies, seenTweets, includeRetweets = false) {
     const url = cursor
         ? `${BASE_URL}/${username}?cursor=${encodeURIComponent(cursor)}`
         : `${BASE_URL}/${username}`;
@@ -492,7 +510,7 @@ async function fetchSinglePage(username, cursor, useProxies, seenTweets) {
         }
     }
     const html = response.data;
-    const result = extractTweetsFromHtml(html, username, seenTweets);
+    const result = extractTweetsFromHtml(html, username, seenTweets, includeRetweets);
     return {
         ...result,
         html
@@ -501,7 +519,7 @@ async function fetchSinglePage(username, cursor, useProxies, seenTweets) {
 /**
  * Fetch tweets for a given username
  */
-async function fetchTweets(username, maxPages = 3, useProxies = false, proxyOptions, useConcurrency = false) {
+async function fetchTweets(username, maxPages = 3, useProxies = false, proxyOptions, useConcurrency = false, includeRetweets = false) {
     try {
         // Charger les proxies au début
         await loadProxies(useProxies, proxyOptions);
@@ -515,7 +533,7 @@ async function fetchTweets(username, maxPages = 3, useProxies = false, proxyOpti
             // Récupérer les pages une par une mais sans délai entre les requêtes
             while (pagesProcessed < maxPages) {
                 try {
-                    const result = await fetchSinglePage(username, nextCursor, useProxies, seenTweets);
+                    const result = await fetchSinglePage(username, nextCursor, useProxies, seenTweets, includeRetweets);
                     // Extraire le profil utilisateur depuis la première page
                     if (pagesProcessed === 0 && result.html) {
                         userProfile = extractUserProfile(result.html, username);
@@ -545,7 +563,7 @@ async function fetchTweets(username, maxPages = 3, useProxies = false, proxyOpti
             let nextCursor = null;
             let pagesProcessed = 0;
             do {
-                const result = await fetchSinglePage(username, nextCursor, useProxies, seenTweets);
+                const result = await fetchSinglePage(username, nextCursor, useProxies, seenTweets, includeRetweets);
                 // Extraire le profil utilisateur depuis la première page
                 if (pagesProcessed === 0 && result.html) {
                     userProfile = extractUserProfile(result.html, username);
